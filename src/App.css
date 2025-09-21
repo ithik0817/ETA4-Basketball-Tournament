@@ -1,0 +1,322 @@
+#root {
+  max-width: 1500px;
+  margin: 0 auto;
+  padding: 2rem;
+  text-align: center;
+}
+
+
+.court-main {
+  /* This container wraps the court and buttons */
+  display: flex;
+  flex-direction: column;
+  align-items: center; /* Center children horizontally */
+  margin: 0 auto; /* Ensures it centers within its parent */
+  margin-bottom: 20px; /* Optional: Add space below the court area */
+}
+
+.court-container {
+  position: relative;
+  width: 797.19px;
+  height: 427.98px;
+  border: 1px solid #ccc;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-top: 16;
+}
+
+.court-image {
+  width: 100%;
+  height: 100%;
+  display: block;
+  user-select: none;
+  cursor: crosshair;
+}
+
+.court-svg {
+  position: absolute;
+  inset: 0;
+  pointer-events: none; /* Important so clicks pass through */
+}
+
+.center-court-dot {
+  fill: white;
+}
+
+.app-container{
+  margin-bottom: 10px;
+}
+.app-content {
+  min-height: calc(50vh - 4rem);
+  width: 100%;
+}
+
+.game-layout-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 4px solid #ccc;
+  border-color: white;
+  border-radius: 10px;
+  min-width: 1250px;
+  gap: 0px;
+  max-width: 1500px;
+}
+
+.players-container{
+  max-width: 250px;
+  padding: 50px;
+  margin-bottom: 0px;
+}
+
+.no-bullets {
+  list-style-type: none; 
+  padding: 0;
+  margin: 0;
+}
+
+.sub-panels-wrapper {
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+  list-style-type: none;
+}
+
+.bench-players {
+  display: grid;
+  grid-template-rows: repeat(2, 1fr);
+  grid-auto-flow: column;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  list-style-type: none;
+  padding: 0;
+}
+
+.bench-player-btn {
+  width: 150px;
+  height: 50px;
+  margin-top: 0;
+  align-items: center;
+  justify-content: center;
+  display: flex;
+  font-size: 14px;
+  background-color: #4a4949ff;
+  border: 1px solid #ccc;
+  color: white;
+}
+
+.bench-player-btn:hover {
+  background-color: #666; 
+  border-color: white;
+}
+
+.bench-player-btn:active {
+  background-color: #0d8329;
+}
+
+.bench-player-btn.selected {
+  background-color: #0d8329;
+  color: white;          
+  border-color: white;
+}
+
+
+.active-player-btn {
+  padding: 4px 8px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  color: white;
+  cursor: pointer;
+  width: 150px;
+  height: 50px;
+  background-color: #4a4949ff;
+}
+
+
+.active-player-btn:hover {
+  background-color: #666; 
+  border-color: white;
+}
+
+.active-player-btn:active {
+  background-color: #0d8329;
+}
+
+.active-player-btn.selected {
+  background-color: #0d8329;
+  color: white;          
+  border-color: white;
+}
+
+.score-table {
+  margin: 20px auto;
+  padding: 12px;
+  border: 2px solid #fff;
+  border-radius: 12px;
+  background: #1e1e2f;
+  color: #fff;
+  max-width: 400px;
+  text-align: center;
+}
+
+.score-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 8px 0;
+}
+
+.team-name {
+  flex: 1;
+  text-align: left;
+  font-weight: bold;
+}
+
+.score {
+  font-size: 1.5rem;
+  margin: 0 10px;
+}
+
+.quarter-control {
+  margin-top: 5px;
+  margin-bottom: 10px;
+}
+
+.quarter-control button {
+  margin: 4px;
+  padding: 8px 16px;
+  background-color: #4a4949; 
+  color: white; 
+  border: 1px solid #666;
+  font-size: 16px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s, border-color 0.2s;
+  border-color: white;
+}
+
+.quarter-control button:hover {
+  background-color: #666; 
+  border-color: white;
+}
+
+.quarter-control button.active {
+  background-color: #0d8329;
+}
+
+.quarter-control button:active {
+  background-color: #0d8329;
+}
+
+.team-stats-container {
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 8px 10px;
+  margin-top: 10px;
+  margin-bottom: 10px;
+  text-align: center; 
+  min-width: 1300;
+}
+
+.team-stats-container h2 {
+  margin-top: 0;
+  margin-bottom: 10;
+}
+
+.player-stats-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: center;
+  margin-bottom: 5px;
+}
+
+.table-header-row {
+  background: #a09797ff;
+}
+
+.player-stats-table th,
+.player-stats-table td {
+  border: 1px solid #ccc;
+  padding: 6px;
+}
+
+.sub-container{
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 8px;
+  margin-top: 10px;
+  margin-bottom: 10px;
+  text-align: center;
+}
+
+.score-table-container {
+  overflow-x: auto; /* Adds a scrollbar for smaller screens if needed */
+  color: #ffffff;
+  margin-bottom: 0px;
+}
+
+.score-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: center;
+}
+
+.score-table th,
+.score-table td {
+  padding: 8px;
+  border: 1px solid #444; /* Darker border for a dark theme */
+}
+
+.table-header-row th {
+  background-color: #333;
+  font-weight: bold;
+}
+
+.score-table tbody tr:nth-child(odd) {
+  background-color: #2a2a2a;
+}
+
+.score-table tbody tr:nth-child(even) {
+  background-color: #1e1e1e;
+}
+
+.team-name {
+  text-align: left;
+  font-weight: bold;
+}
+
+.buttons-group {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  margin-top: 10px;
+  margin-bottom: 0;
+}
+
+.game-control-btn {
+  padding: 8px 16px;
+  border-radius: 8px;
+  min-width: 120px;
+  background-color: #4a4949; 
+  color: white; 
+  border: 1px solid #666;
+  font-size: 16px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s, border-color 0.2s;
+  border-color: white;
+}
+
+.game-control-btn:hover {
+  background-color: #666; 
+  border-color: white;
+}
+
+.game-control-btn:active {
+  background-color: #0d8329;
+}
+
+.bold {
+  font-weight: bold;
+}
