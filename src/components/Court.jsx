@@ -11,13 +11,8 @@ export default function Court({
   quarter
   }) {
   const svgRef = useRef(null);
-  const [markers, setMarkers] = useState([]);
   const [debug, setDebug] = useState(false);
-   const [selectedControl, setSelectedControl] = useState(null); 
-
-  useEffect(() => {
-    setMarkers(shots);
-  }, [shots]);
+  const [selectedControl, setSelectedControl] = useState(null); 
 
   const COURT_WIDTH_FT = 91.9;
   const COURT_HEIGHT_FT = 49.2;
@@ -128,8 +123,6 @@ export default function Court({
     };
 
     onAddShot(newShot);
-
-    setMarkers((prev) => [...prev, newShot]);
     console.log("Shot location:", newShot);
     console.log(is3 ? "3PT" : "2PT", "Distance:", Math.round(distFt), "ft");
   }
@@ -193,7 +186,6 @@ export default function Court({
     Corner 3 Pointers Rectangle Size: ${CORNER_THREE_RECT_WIDTH_FT} FT x ${CORNER_THREE_RECT_HEIGHT_FT} FT,
     `
   );
-
   return (
   <div className="court-main">
     {/* Court container */}
@@ -288,7 +280,7 @@ export default function Court({
         )}
 
         {/* Shots render marker*/}
-          {markers.map((shot) => (
+          {shots.map((shot) => (
             <g key={shot.id}>
               {!shot.isFreeThrow && (
                 <circle

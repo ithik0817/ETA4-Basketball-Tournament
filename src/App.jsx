@@ -44,10 +44,22 @@ function App() {
   const initialActiveRef = useRef({ home: false, away: false });
   const [shots, setShots] = useState([]);
   const sortedShots = useMemo(() => {
+    if (!shots || shots.length === 0) {
+      return [];
+    }
     return [...shots].sort((a, b) => {
-      const dateA = a.createdAt?.toDate()?.getTime() ?? 0;
-      const dateB = b.createdAt?.toDate()?.getTime() ?? 0;
-      return dateA - dateB;
+      // Safely get a Date object for both 'a' and 'b'.
+      // The `instanceof` check is more reliable than optional chaining alone.
+      const dateA = a.createdAt instanceof Date 
+        ? a.createdAt 
+        : a.createdAt?.toDate() ?? new Date(0); // Use a fallback date
+        
+      const dateB = b.createdAt instanceof Date 
+        ? b.createdAt 
+        : b.createdAt?.toDate() ?? new Date(0); // Use a fallback date
+      
+      // getTime() returns the numeric value corresponding to the time for the specified date
+      return dateA.getTime() - dateB.getTime();
     });
   }, [shots]);
 
@@ -63,9 +75,12 @@ function App() {
         const newActiveRoster = rosterToUpdate.map(player => 
             player.id === playerOutId ? playerIn : player
         );
+
+        newActiveRoster.sort((a, b) => a.number - b.number);
+        
         setRosterState(newActiveRoster);
     }
-};
+  };
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       setIsLoadingData(true);
@@ -199,52 +214,48 @@ function App() {
       "shots"
     );
 
-    const q = query(shotsColl, orderBy("createdAt", "desc"));
+    const q = query(shotsColl, orderBy("createdAt", "asc"));
 
     const unsubscribe = onSnapshot(q, (snap) => {
-      const docs = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      const docs = snap.docs.map((d) => ({ 
+        id: d.id, 
+        ...d.data(),
+        createdAt: d.data().createdAt?.toDate()
+      }));
       setShots(docs);
     }, (error) => {
       console.error("shots onSnapshot error:", error);
     });
 
     return () => unsubscribe();
-  }, [selectedTournament, selectedGameId]);
+}, [selectedTournament, selectedGameId]);
 
   async function handleAddShot(shot) {
-    // 1. Assign a temporary client-side ID for immediate UI update
-    setShots((prev) => [...prev, shot]);
-    console.log("shot: ", shot);
+    if (!selectedGameId) {
+      console.error("No selected game ID. Cannot add shot.");
+      return;
+    }
 
-    if (selectedGameId) {
-      const shotsRef = collection(
-        db,
-        "tournaments",
-        selectedTournament.id,
-        "games",
-        selectedGameId,
-        "shots"
-      );
-      try {
-        // 2. Extract the temporary ID and store the rest of the shot data
-        const { id: tempShotId, ...shotDataToStore } = shot;
+    const shotsRef = collection(
+      db,
+      "tournaments",
+      selectedTournament.id,
+      "games",
+      selectedGameId,
+      "shots"
+    );
+    try {
+      const { id, ...shotDataToStore } = shot;
 
-        const docRef = await addDoc(shotsRef, {
-          ...shotDataToStore,
-          createdAt: new Date(),
-        });
+      const docRef = await addDoc(shotsRef, {
+        ...shotDataToStore,
+        createdAt: new Date(),
+      });
 
-        // 3. Update the local state with the Firestore-generated ID
-        setShots((prev) =>
-          prev.map((s) =>
-            s.id === tempShotId ? { ...s, id: docRef.id } : s
-          )
-        );
-      } catch (error) {
-        console.error("Error adding shot: ", error);
-        // Implement error handling, potentially removing the shot from local state
-        setShots((prev) => prev.filter((s) => s.id !== shot.id));
-      }
+      console.log("Added shot to Firestore with ID:", docRef.id);
+
+    } catch (error) {
+      console.error("Error adding shot:", error);
     }
   }
 
@@ -253,9 +264,7 @@ function App() {
 
     const lastShot = shots[shots.length - 1];
 
-    setShots((prev) => prev.slice(0, -1));
-
-    if (selectedGameId && lastShot.id) {
+    if (selectedGameId && lastShot?.id) {
       try {
         const shotRef = doc(
           db,
@@ -267,7 +276,7 @@ function App() {
           lastShot.id
         );
         await deleteDoc(shotRef);
-        console.log("Deleted last shot:", lastShot);
+        console.log("Deleted last shot from Firestore:", lastShot.id);
       } catch (err) {
         console.error("Error deleting last shot:", err);
       }
@@ -280,14 +289,20 @@ function App() {
 
   useEffect(() => {
     if (homeRoster.length && !initialActiveRef.current.home) {
-      setActiveHomePlayers(homeRoster.slice(0, 5));
+      const starters = homeRoster
+        .filter(player => player.starter)
+        .sort((a, b) => a.number - b.number);
+      setActiveHomePlayers(starters);
       initialActiveRef.current.home = true;
     }
   }, [homeRoster]);
 
   useEffect(() => {
     if (awayRoster.length && !initialActiveRef.current.away) {
-      setActiveAwayPlayers(awayRoster.slice(0, 5));
+      const starters = awayRoster
+        .filter(player => player.starter)
+        .sort((a, b) => a.number - b.number);
+      setActiveAwayPlayers(starters);
       initialActiveRef.current.away = true;
     }
   }, [awayRoster]);

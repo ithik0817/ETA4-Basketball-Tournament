@@ -317,6 +317,20 @@
   background-color: #0d8329;
 }
 
+.game-control-btn:disabled {
+  /* Change the appearance to look disabled */
+  background-color: #ccc; /* A standard gray color */
+  color: #666; /* Dim the text */
+  cursor: not-allowed; /* Change the cursor to indicate it's not clickable */
+  border-color: #ccc;
+}
+
+/* Add a rule to specifically disable hover effects on a disabled button */
+.game-control-btn:disabled:hover {
+  background-color: #ccc; /* Keep the same disabled color on hover */
+  border-color: #ccc;
+}
+
 .bold {
   font-weight: bold;
 }
