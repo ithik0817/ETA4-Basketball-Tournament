@@ -46,7 +46,7 @@ export default function Players({
     }
     console.log("Remove:", id);
   }
-  
+
   return (
     <div className="players-container">
       <h3 style={{ marginTop: 0, marginBottom: 0, textAlign: "center" }}>{team}</h3>
@@ -54,6 +54,8 @@ export default function Players({
       <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
         {players.map((p) => {
           const selected = selectedPlayerId === p.id;
+          const canClick =
+            !pendingBenchSub || (pendingBenchSub && teamId === selectedTeamId);
           return (
             <li
               key={p.id}
@@ -64,12 +66,12 @@ export default function Players({
                 gap: 8,
                 marginBottom: 4,
                 padding: 2,
-                borderRadius: 6,
                 justifyContent: "center"
               }}
             >
               <button
                 onClick={() => {
+                  if (!canClick) return; // block if disabled
                   if (pendingBenchSub) {
                     // swap with bench player
                     onSub(teamId, p.id, pendingBenchSub.id);
@@ -81,6 +83,7 @@ export default function Players({
                   }
                 }}
                 className={`active-player-btn ${selected ? "selected" : ""}`}
+                disabled={!canClick} // disable button visually
               >
                 #{p.number} - {p.name}
               </button>

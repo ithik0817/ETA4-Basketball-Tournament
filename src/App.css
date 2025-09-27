@@ -1,18 +1,176 @@
 #root {
-  max-width: 1500px;
-  margin: 0 auto;
-  padding: 2rem;
+  max-width: 1300px;
   text-align: center;
+  margin: 0 auto;
 }
 
+header > img {
+    width: 200;
+    height: auto;
+}
 
-.court-main {
-  /* This container wraps the court and buttons */
+header > h1 {
+    font-size: 75;
+    font-weight: 1000;
+}
+
+.Auth-form {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 20px;
+}
+
+.Auth-input {
+  height: 30px;
+}
+
+.Auth-button{
+  padding: 4px 10px;
+}
+
+.App {
+  width: 100%;
   display: flex;
   flex-direction: column;
-  align-items: center; /* Center children horizontally */
-  margin: 0 auto; /* Ensures it centers within its parent */
-  margin-bottom: 20px; /* Optional: Add space below the court area */
+  align-items: center;
+  margin: 0 auto;
+}
+
+.select-option {
+  margin-bottom: 20px;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+  padding: 8px 16px;
+  text-align: center;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 500;
+  font-size: smaller;
+}
+
+.select-option-item {
+  font-family: inherit;
+  font-size: 16px;
+  font-weight: 500;
+  text-align: center;
+  cursor: pointer;
+  padding: 8px 16px;
+  font-size: smaller;
+}
+
+.score-table-container {
+  overflow-x: auto;
+  margin-bottom: 20px;
+
+}
+
+.score-table {
+  min-width: 550;
+  width: 100%;
+  border-collapse: collapse;
+  text-align: center;
+  font-size: smaller;
+}
+
+.score-table th,
+.score-table td {
+  padding: 4px;
+  border: 1px solid #999; /* Darker border for a dark theme */
+}
+
+.table-header-row th {
+  background-color: #333333;
+  font-weight: bold;
+}
+
+.score-table tbody tr:nth-child(odd) {
+  background-color: #2a2a2a;
+}
+
+.score-table tbody tr:nth-child(even) {
+  background-color: #1e1e1e;
+}
+
+.team-name {
+  font-weight: bold;
+}
+
+.score-total{
+  font-weight: bold;
+}
+
+.flipCourt-control {
+  width: 140px;
+  height: 40px;
+  font-size: smaller;
+}
+
+.quarter-control {
+  margin-top: 5px;
+  margin-bottom: 10px;
+}
+
+.quarter-control button {
+  margin: 4px;
+  padding: 8px 16px;
+  background-color: #4a4949; 
+  font-size: 16px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s, border-color 0.2s;
+  font-size: smaller;
+}
+
+.quarter-control button.active {
+  background-color: 990F02;
+}
+
+.main-content-wrapper {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 20px;
+  border: 4px solid #ccc;
+  border-radius: 10px;
+  width: 100%;
+}
+
+.app-content {
+  width: 100%;
+}
+
+.game-layout-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0px;
+  width: 1300px;
+}
+
+.players-container{
+  width: 100%;
+  height: 100%;
+  padding: 20px;
+}
+
+.players-container button{
+  font-size: smaller;
+  width: 150px;
+  height: 50px;
+}
+
+.players-container button.selected {
+  background-color: #990F02;
+}
+
+.court-main {
+  display: flex;
+  flex-direction: column;
+  align-items: center; 
+  margin: 0 auto; 
+  margin-bottom: 20px;
 }
 
 .court-container {
@@ -37,66 +195,83 @@
 .court-svg {
   position: absolute;
   inset: 0;
-  pointer-events: none; /* Important so clicks pass through */
+  pointer-events: none;
 }
 
-.center-court-dot {
-  fill: white;
-}
-
-.app-container{
-  margin-bottom: 10px;
-}
-.app-content {
-  min-height: calc(50vh - 4rem);
-  width: 100%;
-}
-
-.game-layout-container {
-  display: flex;
-  align-items: center;
-  justify-content: center;
+.popup {
+  position: fixed;
+  top: 30%;
+  left: 50%;
+  transform: translate(-50%, -30%);
+  background: #191E31;
   border: 4px solid #ccc;
-  border-color: white;
   border-radius: 10px;
-  min-width: 1250px;
-  gap: 0px;
-  max-width: 1500px;
+  padding: 20px;
 }
 
-.players-container{
-  max-width: 250px;
-  padding: 50px;
-  margin-bottom: 0px;
-}
-
-.no-bullets {
-  list-style-type: none; 
+.popup ul {
+  display: flex;
+  flex-direction: column;
+  list-style: none;
   padding: 0;
-  margin: 0;
+  gap: 10px;
+}
+
+.popup button{
+  font-size: smaller;
+  width: 150px;
+  height: 50px;
+}
+
+.buttons-group {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  margin-top: 10px;
+  margin-bottom: -5px;
+}
+.buttons-group button{
+  font-size: smaller;
+}
+
+.buttons-group button:disabled {
+  background-color: #ccc; 
+  color: #666;
+  cursor: not-allowed; 
+  border-color: #ccc;
 }
 
 .sub-panels-wrapper {
   display: flex;
   justify-content: center;
-  gap: 20px;
-  list-style-type: none;
+  gap: 10px;
+  list-style-type: none; 
+  margin-bottom: 0px;
+}
+
+.sub-container {
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  padding: 10px;
+  text-align: center;
+  max-width: 1300px;
+  margin-left: auto;  
+  margin-right: auto; 
+  width: 100%;
 }
 
 .bench-players {
   display: grid;
   grid-template-rows: repeat(2, 1fr);
-  grid-auto-flow: column;
+  grid-auto-flow: center;
   grid-template-columns: repeat(4, 1fr);
   gap: 10px;
-  list-style-type: none;
   padding: 0;
+  margin-top: 0px;
 }
-
 .bench-player-btn {
   width: 150px;
   height: 50px;
-  margin-top: 0;
   align-items: center;
   justify-content: center;
   display: flex;
@@ -104,109 +279,11 @@
   background-color: #4a4949ff;
   border: 1px solid #ccc;
   color: white;
-}
-
-.bench-player-btn:hover {
-  background-color: #666; 
-  border-color: white;
-}
-
-.bench-player-btn:active {
-  background-color: #0d8329;
+  font-size: smaller;
 }
 
 .bench-player-btn.selected {
-  background-color: #0d8329;
-  color: white;          
-  border-color: white;
-}
-
-
-.active-player-btn {
-  padding: 4px 8px;
-  border: 1px solid #ccc;
-  border-radius: 6px;
-  color: white;
-  cursor: pointer;
-  width: 150px;
-  height: 50px;
-  background-color: #4a4949ff;
-}
-
-
-.active-player-btn:hover {
-  background-color: #666; 
-  border-color: white;
-}
-
-.active-player-btn:active {
-  background-color: #0d8329;
-}
-
-.active-player-btn.selected {
-  background-color: #0d8329;
-  color: white;          
-  border-color: white;
-}
-
-.score-table {
-  margin: 20px auto;
-  padding: 12px;
-  border: 2px solid #fff;
-  border-radius: 12px;
-  background: #1e1e2f;
-  color: #fff;
-  max-width: 400px;
-  text-align: center;
-}
-
-.score-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin: 8px 0;
-}
-
-.team-name {
-  flex: 1;
-  text-align: left;
-  font-weight: bold;
-}
-
-.score {
-  font-size: 1.5rem;
-  margin: 0 10px;
-}
-
-.quarter-control {
-  margin-top: 5px;
-  margin-bottom: 10px;
-}
-
-.quarter-control button {
-  margin: 4px;
-  padding: 8px 16px;
-  background-color: #4a4949; 
-  color: white; 
-  border: 1px solid #666;
-  font-size: 16px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: background-color 0.2s, border-color 0.2s;
-  border-color: white;
-}
-
-.quarter-control button:hover {
-  background-color: #666; 
-  border-color: white;
-}
-
-.quarter-control button.active {
-  background-color: #0d8329;
-}
-
-.quarter-control button:active {
-  background-color: #0d8329;
+  background-color: #990F02;
 }
 
 .team-stats-container {
@@ -216,7 +293,9 @@
   margin-top: 10px;
   margin-bottom: 10px;
   text-align: center; 
-  min-width: 1300;
+  max-width: 1300px;
+  width: 100%;
+  font-size: smaller;
 }
 
 .team-stats-container h2 {
@@ -229,108 +308,45 @@
   border-collapse: collapse;
   text-align: center;
   margin-bottom: 5px;
-}
-
-.table-header-row {
-  background: #a09797ff;
+  font-size: small;
 }
 
 .player-stats-table th,
 .player-stats-table td {
   border: 1px solid #ccc;
   padding: 6px;
+  
 }
 
-.sub-container{
-  border: 1px solid #ddd;
-  border-radius: 8px;
-  padding: 8px;
-  margin-top: 10px;
-  margin-bottom: 10px;
-  text-align: center;
-}
-
-.score-table-container {
-  overflow-x: auto; /* Adds a scrollbar for smaller screens if needed */
-  color: #ffffff;
-  margin-bottom: 0px;
-}
-
-.score-table {
-  width: 100%;
-  border-collapse: collapse;
-  text-align: center;
-}
-
-.score-table th,
-.score-table td {
-  padding: 8px;
-  border: 1px solid #444; /* Darker border for a dark theme */
-}
-
-.table-header-row th {
-  background-color: #333;
-  font-weight: bold;
-}
-
-.score-table tbody tr:nth-child(odd) {
-  background-color: #2a2a2a;
-}
-
-.score-table tbody tr:nth-child(even) {
-  background-color: #1e1e1e;
-}
-
-.team-name {
+.fixed-left-cell {
   text-align: left;
+  width: 200px;
+  border: 1px solid #ccc;
+  padding: 6px;
+}
+
+.team-totals-row {
   font-weight: bold;
-}
-
-.buttons-group {
-  display: flex;
-  gap: 10px;
-  justify-content: center;
-  margin-top: 10px;
-  margin-bottom: 0;
-}
-
-.game-control-btn {
-  padding: 8px 16px;
-  border-radius: 8px;
-  min-width: 120px;
-  background-color: #4a4949; 
-  color: white; 
-  border: 1px solid #666;
-  font-size: 16px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: background-color 0.2s, border-color 0.2s;
-  border-color: white;
-}
-
-.game-control-btn:hover {
-  background-color: #666; 
-  border-color: white;
-}
-
-.game-control-btn:active {
-  background-color: #0d8329;
-}
-
-.game-control-btn:disabled {
-  /* Change the appearance to look disabled */
-  background-color: #ccc; /* A standard gray color */
-  color: #666; /* Dim the text */
-  cursor: not-allowed; /* Change the cursor to indicate it's not clickable */
-  border-color: #ccc;
-}
-
-/* Add a rule to specifically disable hover effects on a disabled button */
-.game-control-btn:disabled:hover {
-  background-color: #ccc; /* Keep the same disabled color on hover */
-  border-color: #ccc;
+  border-top: 2px solid #ccc;
 }
 
 .bold {
   font-weight: bold;
+}
+
+
+
+.free-throw-columns {
+  display: flex;
+  gap: 2rem;
+  justify-content: center;
+}
+
+.team-column {
+  flex: 1;
+  text-align: center;
+}
+
+.team-column h4 {
+  margin-bottom: 0.5rem;
 }

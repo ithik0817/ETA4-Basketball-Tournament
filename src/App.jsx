@@ -17,6 +17,7 @@ import Players from "./components/Players";
 import ScoreTable from "./components/ScoreTable";
 
 function App() {
+  const [flipCourt, setFlipCourt] = useState(true);
   const [user, setUser] = useState(null);
   const [show, setShow] = React.useState(true)
   const [isLoadingData, setIsLoadingData] = useState(true);
@@ -48,44 +49,34 @@ function App() {
       return [];
     }
     return [...shots].sort((a, b) => {
-      // Safely get a Date object for both 'a' and 'b'.
-      // The `instanceof` check is more reliable than optional chaining alone.
       const dateA = a.createdAt instanceof Date 
         ? a.createdAt 
-        : a.createdAt?.toDate() ?? new Date(0); // Use a fallback date
-        
+        : a.createdAt?.toDate() ?? new Date(0);
       const dateB = b.createdAt instanceof Date 
         ? b.createdAt 
-        : b.createdAt?.toDate() ?? new Date(0); // Use a fallback date
-      
-      // getTime() returns the numeric value corresponding to the time for the specified date
+        : b.createdAt?.toDate() ?? new Date(0);
       return dateA.getTime() - dateB.getTime();
     });
   }, [shots]);
-
   const handleSub = (teamId, playerOutId, playerInId) => {
     const rosterToUpdate = teamId === awayTeamId ? activeAwayPlayers : activeHomePlayers;
     const setRosterState = teamId === awayTeamId ? setActiveAwayPlayers : setActiveHomePlayers;
     const fullRoster = teamId === awayTeamId ? awayRoster : homeRoster;
-
     const playerOut = rosterToUpdate.find(p => p.id === playerOutId);
     const playerIn = fullRoster.find(p => p.id === playerInId);
-
     if (playerOut && playerIn) {
         const newActiveRoster = rosterToUpdate.map(player => 
             player.id === playerOutId ? playerIn : player
         );
-
         newActiveRoster.sort((a, b) => a.number - b.number);
-        
         setRosterState(newActiveRoster);
     }
   };
+
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       setIsLoadingData(true);
       setUser(currentUser);
-
       if (currentUser) {
         const idTokenResult = await currentUser.getIdTokenResult(true);
         console.log("Custom claims from token:", idTokenResult.claims);
@@ -96,34 +87,28 @@ function App() {
       }
       setIsLoadingData(false);
     });
-
     return () => unsubscribe();
   }, []);
 
   useEffect(() => {
     if (!selectedGameId) return;
-
     const game = games.find((g) => g.id === selectedGameId);
     if (!game) return;
-
     let unsubHomeTeam = () => {};
     let unsubHomeRoster = () => {};
     let unsubAwayTeam = () => {};
     let unsubAwayRoster = () => {};
-
     if (game.homeTeamId) {
       const homeTeamRef = doc(db, "teams", game.homeTeamId);
       unsubHomeTeam = onSnapshot(homeTeamRef, (snap) => {
         if (snap.exists()) setHomeTeamName(snap.data().name || "Unknown Team");
         else setHomeTeamName("Unknown Team");
       }, (err) => console.error("homeTeam onSnapshot:", err));
-
       const homeRosterColl = collection(homeTeamRef, "roster");
       unsubHomeRoster = onSnapshot(homeRosterColl, (snap) => {
         setHomeRoster(snap.docs.map(d => ({ id: d.id, ...d.data() })));
       }, (err) => console.error("homeRoster onSnapshot:", err));
     }
-
     if (game.awayTeamId) {
       const awayTeamRef = doc(db, "teams", game.awayTeamId);
       unsubAwayTeam = onSnapshot(awayTeamRef, (snap) => {
@@ -320,7 +305,6 @@ function App() {
   if (isLoadingData) {
     return <div>Loading...</div>;
   }
-
   return (
     <main className="App">
       <Header/>
@@ -331,16 +315,21 @@ function App() {
       ) : (
         <>
           <h2>Select Game</h2>
-          <select className="default-option"
+          <select className="select-option"
             value={selectedGameId || ""}
             onChange={(e) => setSelectedGameId(e.target.value)}
           >
-            <option value="">-- Select a game --</option>
+            <option className="select-option-item" value="">
+              -- Select a game --
+            </option>
             {games.map((g) => {
               const homeTeam = teams.find((t) => t.id === g.homeTeamId);
               const awayTeam = teams.find((t) => t.id === g.awayTeamId);
               return (
-                <option key={g.id} value={g.id}>
+                <option className="select-option-item"
+                  key={g.id}
+                  value={g.id}
+                >
                   {awayTeam?.name || g.awayTeamId} vs{" "}
                   {homeTeam?.name || g.homeTeamId} — {formatDate(g.date)}
                 </option>
@@ -358,36 +347,61 @@ function App() {
                   quarter={currentQuarter}
                   shots={shots}
                 />
-                 <div className="quarter-control">
-                  <h3>Quarter: {currentQuarter}</h3>
-                  {quarters.map((q, i) => (
-                    <button
-                      key={i}
-                      className={currentQuarter === q ? "active" : ""}
-                      onClick={() => setCurrentQuarter(q)} // Set the state on click
-                    >
-                      {q}
-                    </button>
-                  ))}
-                </div>
+                <button className="flipCourt-control" onClick={() => setFlipCourt(prev => !prev)}>
+                  {flipCourt ? "Flip Court" : "Flip to Default"}
+                </button>
+                <div className="quarter-control">
+                <h3>Quarter: {currentQuarter}</h3>
+                {quarters.map((q, i) => (
+                  <button
+                    key={i}
+                    className={currentQuarter === q ? "active" : ""}
+                    onClick={() => setCurrentQuarter(q)} // Set the state on click
+                  >
+                    {q}
+                  </button>
+                ))}
               </div>
+              </div>
+              <div className="main-content-wrapper">
               <div className="app-container">
                     <div className="app-content"> 
                       <div className="game-layout-container">
-                        {/* Pass the active players lists here */}
-                        <Players
-                          players={activeAwayPlayers} // Use active players
-                          setPlayers={setActiveAwayPlayers}
-                          selectedPlayerId={selectedPlayerId}
-                          setSelectedPlayerId={setSelectedPlayerId}
-                          selectedTeamId={awayTeamId}
-                          setSelectedTeamId={setSelectedTeamId}
-                          team={awayTeamName}
-                          teamId={awayTeamId}
-                          onSub={handleSub}
-                          pendingBenchSub={pendingBenchSub}
-                          setPendingBenchSub={setPendingBenchSub}
-                        />
+                        {flipCourt ? (
+                          <>
+                            {/* Away active players lists here */}
+                            <Players
+                              players={activeAwayPlayers} // Use active players
+                              setPlayers={setActiveAwayPlayers}
+                              selectedPlayerId={selectedPlayerId}
+                              setSelectedPlayerId={setSelectedPlayerId}
+                              selectedTeamId={awayTeamId}
+                              setSelectedTeamId={setSelectedTeamId}
+                              team={awayTeamName}
+                              teamId={awayTeamId}
+                              onSub={handleSub}
+                              pendingBenchSub={pendingBenchSub}
+                              setPendingBenchSub={setPendingBenchSub}
+                            />
+                          </>
+                        ) : (
+                          <>
+                            {/* Home active players lists here */}
+                            <Players
+                              players={activeHomePlayers} // Use active players
+                              setPlayers={setActiveHomePlayers}
+                              selectedPlayerId={selectedPlayerId}
+                              setSelectedPlayerId={setSelectedPlayerId}
+                              selectedTeamId={homeTeamId}
+                              setSelectedTeamId={setSelectedTeamId} 
+                              team={homeTeamName}
+                              teamId={homeTeamId}
+                              onSub={handleSub}
+                              pendingBenchSub={pendingBenchSub}
+                              setPendingBenchSub={setPendingBenchSub}
+                            />
+                          </>
+                        )}
                         <Court 
                           onAddShot={handleAddShot} 
                           selectedPlayerId={selectedPlayerId}
@@ -395,45 +409,102 @@ function App() {
                           onUndo={handleUndoShot} 
                           shots={shots}
                           quarter={currentQuarter}
+                          activeHomePlayers={activeHomePlayers}
+                          activeAwayPlayers={activeAwayPlayers}
+                          homeTeamId={homeTeamId}
+                          awayTeamId={awayTeamId}
+                          flipCourt={flipCourt}
+                          homeTeamName={homeTeamName}
+                          awayTeamName={awayTeamName}
                         />
-                        <Players
-                          players={activeHomePlayers} // Use active players
-                          setPlayers={setActiveHomePlayers}
-                          selectedPlayerId={selectedPlayerId}
-                          setSelectedPlayerId={setSelectedPlayerId}
-                          selectedTeamId={homeTeamId}
-                          setSelectedTeamId={setSelectedTeamId} 
-                          team={homeTeamName}
-                          teamId={homeTeamId}
-                          onSub={handleSub}
-                          pendingBenchSub={pendingBenchSub}
-                          setPendingBenchSub={setPendingBenchSub}
-                        />
+                        {flipCourt ? (
+                          <>
+                            {/* Home active players lists here */}
+                            <Players
+                              players={activeHomePlayers} // Use active players
+                              setPlayers={setActiveHomePlayers}
+                              selectedPlayerId={selectedPlayerId}
+                              setSelectedPlayerId={setSelectedPlayerId}
+                              selectedTeamId={homeTeamId}
+                              setSelectedTeamId={setSelectedTeamId} 
+                              team={homeTeamName}
+                              teamId={homeTeamId}
+                              onSub={handleSub}
+                              pendingBenchSub={pendingBenchSub}
+                              setPendingBenchSub={setPendingBenchSub}
+                            />
+                          </>
+                        ) : (
+                          <>
+                            {/* Away active players lists here */}
+                            <Players
+                              players={activeAwayPlayers} // Use active players
+                              setPlayers={setActiveAwayPlayers}
+                              selectedPlayerId={selectedPlayerId}
+                              setSelectedPlayerId={setSelectedPlayerId}
+                              selectedTeamId={awayTeamId}
+                              setSelectedTeamId={setSelectedTeamId}
+                              team={awayTeamName}
+                              teamId={awayTeamId}
+                              onSub={handleSub}
+                              pendingBenchSub={pendingBenchSub}
+                              setPendingBenchSub={setPendingBenchSub}
+                            />
+                          </>
+                        )}
                       </div>
                     </div>
                   </div>
-                  <div className="sub-panels-wrapper">
-                    <Substitutions
-                      teamId={awayTeamId}
-                      teamName={awayTeamName}
-                      fullRoster={awayRoster}
-                      activePlayers={activeAwayPlayers}
-                      onSub={handleSub}
-                      setPendingBenchSub={setPendingBenchSub}
-                      pendingBenchSub={pendingBenchSub}
-                    />
-
-                    <Substitutions
-                      teamId={homeTeamId}
-                      teamName={homeTeamName}
-                      fullRoster={homeRoster}
-                      activePlayers={activeHomePlayers}
-                      onSub={handleSub}
-                      setPendingBenchSub={setPendingBenchSub}
-                      pendingBenchSub={pendingBenchSub}
-                    />
                   </div>
-
+                  <div className="sub-panels-wrapper">
+                    {flipCourt ? (
+                      <>
+                        {/* Away bench players lists here */}
+                        <Substitutions
+                          teamId={awayTeamId}
+                          teamName={awayTeamName}
+                          fullRoster={awayRoster}
+                          activePlayers={activeAwayPlayers}
+                          onSub={handleSub}
+                          setPendingBenchSub={setPendingBenchSub}
+                          pendingBenchSub={pendingBenchSub}
+                        />
+                        {/* Home bench players lists here */}
+                        <Substitutions
+                          teamId={homeTeamId}
+                          teamName={homeTeamName}
+                          fullRoster={homeRoster}
+                          activePlayers={activeHomePlayers}
+                          onSub={handleSub}
+                          setPendingBenchSub={setPendingBenchSub}
+                          pendingBenchSub={pendingBenchSub}
+                        />
+                      </>
+                    ) : (
+                      <>
+                        {/* Home bench players lists here */}
+                        <Substitutions
+                          teamId={homeTeamId}
+                          teamName={homeTeamName}
+                          fullRoster={homeRoster}
+                          activePlayers={activeHomePlayers}
+                          onSub={handleSub}
+                          setPendingBenchSub={setPendingBenchSub}
+                          pendingBenchSub={pendingBenchSub}
+                        />
+                        {/* Away bench players lists here */}
+                        <Substitutions
+                          teamId={awayTeamId}
+                          teamName={awayTeamName}
+                          fullRoster={awayRoster}
+                          activePlayers={activeAwayPlayers}
+                          onSub={handleSub}
+                          setPendingBenchSub={setPendingBenchSub}
+                          pendingBenchSub={pendingBenchSub}
+                        />
+                      </>
+                    )}
+                  </div>
                   {/* Stats Table Away Team*/}
                     <Stats 
                       players={awayRoster}

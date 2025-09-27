@@ -3,41 +3,60 @@ import React, { useMemo } from "react";
 // Define possible quarter labels, including overtime
 const quarterLabels = [1, 2, 3, 4, "OT"];
 
-export default function ScoreTable({ awayTeamId, homeTeamId, awayTeamName, homeTeamName, shots }) {
-  // Use useMemo to re-calculate scores only when the 'shots' array changes
-  const { homeScoresByQuarter, awayScoresByQuarter, totalHomeScore, totalAwayScore } = useMemo(() => {
-    // Initialize quarter-by-quarter score objects
+export default function ScoreTable({
+  awayTeamId, 
+  homeTeamId, 
+  awayTeamName, 
+  homeTeamName, 
+  shots 
+}) {
+  const { 
+    homeScoresByQuarter,
+    awayScoresByQuarter,
+    totalHomeScore,
+    totalAwayScore,
+    hasOT
+  } = useMemo(() => {
     const homeScoresByQuarter = {};
     const awayScoresByQuarter = {};
     let totalHomeScore = 0;
     let totalAwayScore = 0;
 
-    // Initialize all quarters to a score of 0
-    quarterLabels.forEach(q => {
+    [1, 2, 3, 4].forEach(q => {
       homeScoresByQuarter[q] = 0;
       awayScoresByQuarter[q] = 0;
     });
 
-    // Loop through all made shots and tally scores by team and quarter
+    homeScoresByQuarter["OT"] = 0;
+    awayScoresByQuarter["OT"] = 0;
+
     shots.forEach(shot => {
       if (shot.made) {
         if (shot.teamId === homeTeamId) {
-          homeScoresByQuarter[shot.quarter] += shot.points;
+          homeScoresByQuarter[shot.quarter] =
+            (homeScoresByQuarter[shot.quarter] || 0) + shot.points;
           totalHomeScore += shot.points;
         } else if (shot.teamId === awayTeamId) {
-          awayScoresByQuarter[shot.quarter] += shot.points;
+          awayScoresByQuarter[shot.quarter] =
+            (awayScoresByQuarter[shot.quarter] || 0) + shot.points;
           totalAwayScore += shot.points;
         }
       }
     });
+
+    const hasOT = 
+      homeScoresByQuarter["OT"] > 0 || awayScoresByQuarter["OT"] > 0;
 
     return {
       homeScoresByQuarter,
       awayScoresByQuarter,
       totalHomeScore,
       totalAwayScore,
+      hasOT
     };
-  }, [shots, homeTeamId, awayTeamId]); // Dependency array includes team IDs
+  }, [shots, homeTeamId, awayTeamId]);
+
+  const quarterLabels = hasOT ? [1, 2, 3, 4, "OT"] : [1, 2, 3, 4];
 
   return (
     <div className="score-table-container">
@@ -57,14 +76,14 @@ export default function ScoreTable({ awayTeamId, homeTeamId, awayTeamName, homeT
             {quarterLabels.map(q => (
               <td key={q}>{awayScoresByQuarter[q]}</td>
             ))}
-            <td>{totalAwayScore}</td>
+            <td className="score-total">{totalAwayScore}</td>
           </tr>
           <tr>
             <td className="team-name">{homeTeamName || "Home Team"}</td>
             {quarterLabels.map(q => (
               <td key={q}>{homeScoresByQuarter[q]}</td>
             ))}
-            <td>{totalHomeScore}</td>
+            <td className="score-total">{totalHomeScore}</td>
           </tr>
         </tbody>
       </table>

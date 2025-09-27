@@ -27,8 +27,13 @@ export const Substitutions = ({
 
   return (
     <div className="sub-container">
-      <h3 style={{ textAlign: "center", marginTop: 5}}>{teamName} Bench</h3>
-
+      <h3 style={{ 
+        textAlign: "center", 
+        marginTop: 0, 
+        marginBottom: 10
+      }}>
+        {teamName} Bench
+      </h3>
       <div className="bench-players">
         {benchPlayers.map((player) => (
           <li key={player.id}>

@@ -35,9 +35,13 @@ export default function Auth({ user, setUser }) {
       {user ? (
         <>
           <span style={{ marginRight: 8 }}>
-            Welcome, {user.email}
+            Welcome!
           </span>
-          <button onClick={handleLogout}>Logout</button>
+          <button 
+            className="Auth-button"
+            onClick={handleLogout}>
+            Logout
+          </button>
         </>
       ) : (
         <form onSubmit={handleAuth} className="Auth-form">
@@ -63,7 +67,9 @@ export default function Auth({ user, setUser }) {
             required
             autoComplete="current-password"
           />
-          <button type="submit">
+          <button 
+            className="Auth-button"
+            type="submit">
             Login
           </button>
           {error && <div style={{ color: "red" }}>{error}</div>}
