@@ -1,4 +1,4 @@
-// src/Substitutions.jsx
+// src/components/Substitutions.jsx
 import React, { useState } from "react";
 
 export const Substitutions = ({
@@ -21,8 +21,9 @@ export const Substitutions = ({
     if (pendingBenchSub && pendingBenchSub.id === player.id) {
       setPendingBenchSub(null);
     } else {
-      setPendingBenchSub(player);
+      setPendingBenchSub({ ...player, teamId });
     }
+    setSelectedBenchPlayer((prev) => (prev && prev.id === player.id ? null : player));
   };
 
   return (

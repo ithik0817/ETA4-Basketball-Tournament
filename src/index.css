@@ -19,7 +19,7 @@ header {
 }
 
 body {
-  margin: 20;
+  margin: 20px;
   min-width: 320px;
   min-height: 100vh;
   display: flex;
@@ -47,4 +47,8 @@ button:hover {
 
 button:active {
   background-color: #BC544B;
+}
+
+html, body, #root {
+    height: 100%;
 }

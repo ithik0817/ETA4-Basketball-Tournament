@@ -2,6 +2,7 @@
   max-width: 1300px;
   text-align: center;
   margin: 0 auto;
+  min-height: 100vh;
 }
 
 header > img {
@@ -35,6 +36,7 @@ header > h1 {
   flex-direction: column;
   align-items: center;
   margin: 0 auto;
+  min-height: 100vh;
 }
 
 .select-option {
@@ -63,11 +65,10 @@ header > h1 {
 .score-table-container {
   overflow-x: auto;
   margin-bottom: 20px;
-
 }
 
 .score-table {
-  min-width: 550;
+  min-width: 550px;
   width: 100%;
   border-collapse: collapse;
   text-align: center;
@@ -135,6 +136,7 @@ header > h1 {
   border: 4px solid #ccc;
   border-radius: 10px;
   width: 100%;
+  height: 100%;
 }
 
 .app-content {
@@ -145,20 +147,22 @@ header > h1 {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 0px;
-  width: 1300px;
-}
-
-.players-container{
+  gap: 15px;
+  max-width: 1300px;
   width: 100%;
   height: 100%;
-  padding: 20px;
+}
+
+.players-container {
+  width: 200px;
+  height: 500px;
+  padding: 10px;
+  margin: auto 0;
 }
 
 .players-container button{
-  font-size: smaller;
-  width: 150px;
-  height: 50px;
+  width: 175px;
+  height: 60px;
 }
 
 .players-container button.selected {
@@ -334,8 +338,6 @@ header > h1 {
   font-weight: bold;
 }
 
-
-
 .free-throw-columns {
   display: flex;
   gap: 2rem;
@@ -349,4 +351,10 @@ header > h1 {
 
 .team-column h4 {
   margin-bottom: 0.5rem;
+}
+
+.active-player-btn.disabled,
+.active-player-btn[disabled] {
+  opacity: 0.50;
+  cursor: not-allowed;
 }

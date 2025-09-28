@@ -1,4 +1,4 @@
-// src/Players.jsx
+// src/components/Players.jsx
 import React, { useState } from "react";
 import { db } from "../firebase";  
 import { doc, collection, addDoc, deleteDoc } from "firebase/firestore";
@@ -17,10 +17,11 @@ export default function Players({
   setPendingBenchSub,
 }) {
   const [newPlayer, setNewPlayer] = useState("");
+
   async function handleAdd() {
     const Name = newPlayer.trim();
     if (!Name) return;
-    const dup = players.some((p) => p.Name.toLowerCase() === Name.toLowerCase());
+    const dup = players.some((p) => p.Name?.toLowerCase() === Name.toLowerCase());
     if (dup) {
       alert(`Player "${Name}" already exists.`);
       return;
@@ -46,7 +47,7 @@ export default function Players({
     }
     console.log("Remove:", id);
   }
-
+  
   return (
     <div className="players-container">
       <h3 style={{ marginTop: 0, marginBottom: 0, textAlign: "center" }}>{team}</h3>
@@ -54,8 +55,7 @@ export default function Players({
       <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
         {players.map((p) => {
           const selected = selectedPlayerId === p.id;
-          const canClick =
-            !pendingBenchSub || (pendingBenchSub && teamId === selectedTeamId);
+          const canClick = pendingBenchSub?.teamId === teamId;
           return (
             <li
               key={p.id}
@@ -64,26 +64,25 @@ export default function Players({
                 alignItems: "center",
                 alignContent: "center",
                 gap: 8,
-                marginBottom: 4,
+                marginBottom: 20,
                 padding: 2,
                 justifyContent: "center"
               }}
             >
               <button
                 onClick={() => {
-                  if (!canClick) return; // block if disabled
+                  if (!canClick) return;
                   if (pendingBenchSub) {
-                    // swap with bench player
                     onSub(teamId, p.id, pendingBenchSub.id);
                     setPendingBenchSub(null);
                   } else {
-                    // normal selection
                     setSelectedPlayerId(p.id);
-                    setSelectedTeamId(selectedTeamId);
+                    setSelectedTeamId(teamId);
                   }
                 }}
-                className={`active-player-btn ${selected ? "selected" : ""}`}
-                disabled={!canClick} // disable button visually
+                className={`active-player-btn ${selected ? "selected" : ""} ${!canClick ? "disabled" : ""}`}
+                disabled={!canClick}
+                title={!canClick ? "Select a bench player from this team first" : undefined}
               >
                 #{p.number} - {p.name}
               </button>

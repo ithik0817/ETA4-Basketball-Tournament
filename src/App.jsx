@@ -416,7 +416,7 @@ function App() {
                           flipCourt={flipCourt}
                           homeTeamName={homeTeamName}
                           awayTeamName={awayTeamName}
-                        />
+                         />
                         {flipCourt ? (
                           <>
                             {/* Home active players lists here */}
