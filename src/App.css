@@ -159,6 +159,13 @@ header > h1 {
   height: 100%;
 }
 
+@media (max-width: 768px) {
+  .game-layout-container {
+    width: 100%;
+    flex-direction: column;
+  }
+}
+
 .players-container {
   width: 200px;
   height: 500px;

@@ -167,7 +167,6 @@ export default function Court({
         distFt: 15,
         quarter,
         flipCourt,
-        teamId,
       };
     } else {
       const { is3, distFt, inCorner3, behindArc } = computeIsThree(ftX, ftY, courtSide, flipCourt);
