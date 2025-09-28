@@ -541,6 +541,13 @@ function App() {
                               {s.isFreeThrow
                                 ? "free throw for 1 point"
                                 : `${Math.round(s.distFt)}-foot ${s.is3 ? "3-pointer" : "2-pointer"}`}
+                              {s.made && s.assistPlayerId && (
+                                <> (assist by { 
+                                      homeRoster.find(p => p.id === s.assistPlayerId)?.name ||
+                                      awayRoster.find(p => p.id === s.assistPlayerId)?.name ||
+                                      "Unknown"
+                                    })</>
+                              )}
                             </li>
                           );
                         })}

@@ -23,6 +23,7 @@ export default function Stats({ players, shots, team }) {
       const threesM = playerShots.filter((s) => s.points === 3 && s.made).length;
       const oneA = playerShots.filter((s) => s.points === 1).length;
       const oneM = playerShots.filter((s) => s.points === 1 && s.made).length;
+      const assists = shots.filter((s) => s.assistPlayerId === p.id).length;
       const twoPct = twosA > 0 ? ((twosM / twosA) * 100).toFixed(1) : "0.0";
       const threePct = threesA > 0 ? ((threesM / threesA) * 100).toFixed(1) : "0.0";
       const fgm = twosM + threesM;
@@ -44,6 +45,7 @@ export default function Stats({ players, shots, team }) {
         fga,
         fgPct,
         pts,
+        assists,
       };
     });
   }, [players, shots]);
@@ -58,11 +60,12 @@ export default function Stats({ players, shots, team }) {
         threesA: sum.threesA + p.threesA,
         oneM: sum.oneM + p.oneM,
         oneA: sum.oneA + p.oneA,
+        assists: sum.assists + p.assists,
         fgm: sum.fgm + p.fgm,
         fga: sum.fga + p.fga,
         pts: sum.pts + p.pts,
       }),
-      { twosM: 0, twosA: 0, threesM: 0, threesA: 0, oneM: 0, oneA: 0, fgm: 0, fga: 0, pts: 0 }
+      { twosM: 0, twosA: 0, threesM: 0, threesA: 0, oneM: 0, oneA: 0, fgm: 0, fga: 0, pts: 0, assists: 0 }
     );
   }, [playerStats]);
 
@@ -84,6 +87,7 @@ export default function Stats({ players, shots, team }) {
         <td>{stats.twosM ?? 0}-{stats.twosA ?? 0}</td>
         <td>{stats.threesM ?? 0}-{stats.threesA ?? 0}</td>
         <td>{stats.oneM ?? 0}-{stats.oneA ?? 0}</td>
+        <td>{stats.assists ?? 0}</td>
         <td>{stats.twoPct ?? "0.0"}%</td>
         <td>{stats.threePct ?? "0.0"}%</td>
         <td>{stats.fgm ?? 0}-{stats.fga ?? 0}</td>
@@ -106,6 +110,7 @@ export default function Stats({ players, shots, team }) {
               <th>2PT</th>
               <th>3PT</th>
               <th>FT</th>
+              <th>AST</th>
               <th>2PT%</th>
               <th>3PT%</th>
               <th>FG</th>
@@ -126,6 +131,7 @@ export default function Stats({ players, shots, team }) {
               <td>{totals.twosM}-{totals.twosA}</td>
               <td>{totals.threesM}-{totals.threesA}</td>
               <td>{totals.oneM}-{totals.oneA}</td>
+              <td>{totals.assists}</td>
               <td>{teamTwoPct}%</td>
               <td>{teamThreePct}%</td>
               <td>{totals.fgm}-{totals.fga}</td>

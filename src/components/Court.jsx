@@ -152,7 +152,7 @@ export default function Court({
     return { is3, distFt, inCorner3, behindArc };
   }
 
-  function finalizeShot(made) {
+  function finalizeShot(made, assistPlayerId = null) {
     const { ftX, ftY, playerId, teamId, courtSide, flipCourt, isFreeThrow } = pendingShot;
    
     let newShot;
@@ -167,6 +167,7 @@ export default function Court({
         distFt: 15,
         quarter,
         flipCourt,
+        assistPlayerId,
       };
     } else {
       const { is3, distFt, inCorner3, behindArc } = computeIsThree(ftX, ftY, courtSide, flipCourt);
@@ -188,9 +189,9 @@ export default function Court({
       made,
       points,
       quarter,
+      assistPlayerId,
     };
   }
-
     onAddShot(newShot);
     setPendingShot(null);
     setPopupStep(null);
@@ -230,6 +231,7 @@ export default function Court({
               fill="none"
               stroke="red"
               strokeDasharray="6,4"
+              opacity="0.5"
             />
             <circle
               cx={rimRightPx.x}
@@ -238,6 +240,7 @@ export default function Court({
               fill="none"
               stroke="red"
               strokeDasharray="6,4"
+              opacity="0.5"
             />
 
             {/* Rims */}
@@ -245,15 +248,17 @@ export default function Court({
               cx={rimLeftPx.x}
               cy={rimLeftPx.y}
               r={7.5}
-              fill="white"
+              fill="none"
               stroke="red"
+              opacity="0.5"
             />
             <circle
               cx={rimRightPx.x}
               cy={rimRightPx.y}
               r={7.5}
-              fill="white"
+              fill="none"
               stroke="red"
+              opacity="0.5"
             />
 
             {/* Corner 3 rectangles */}
@@ -265,6 +270,7 @@ export default function Court({
               fill="none"
               stroke="red"
               strokeDasharray="6 4"
+              opacity="0.5"
             />
             <rect
               x={ftToPxX(TopX)}
@@ -274,6 +280,7 @@ export default function Court({
               fill="none"
               stroke="red"
               strokeDasharray="6 4"
+              opacity="0.5"
             />
             <rect
               x={RightXPx}
@@ -283,6 +290,7 @@ export default function Court({
               fill="none"
               stroke="red"
               strokeDasharray="6 4"
+              opacity="0.5"
             />
             <rect
               x={RightXPx}
@@ -292,6 +300,7 @@ export default function Court({
               fill="none"
               stroke="red"
               strokeDasharray="6 4"
+              opacity="0.5"
             />
           </g>
         )}
@@ -305,14 +314,40 @@ export default function Court({
             return (
               <g key={shot.id}>
                 {!shot.isFreeThrow && (
-                  <circle
-                    cx={ftToPxX(shot.ftX)}
-                    cy={ftToPxY(shot.ftY)}
-                    r="5"
-                    fill={shot.made ? (shot.is3 ? "red" : "blue") : "none"}
-                    stroke= {shot.made ? "white" : (shot.is3 ? "red" : "blue")}
-                    strokeWidth="1"
-                  />
+                  <>
+                    {shot.made ? (
+                      <circle
+                        cx={ftToPxX(shot.ftX)}
+                        cy={ftToPxY(shot.ftY)}
+                        r="5"
+                        fill="none"
+                        stroke="green"
+                        strokeWidth="2"
+                        opacity="0.5"
+                      />
+                    ) : (
+                      <>
+                        <line
+                          x1={ftToPxX(shot.ftX) - 5}
+                          y1={ftToPxY(shot.ftY) - 5}
+                          x2={ftToPxX(shot.ftX) + 5}
+                          y2={ftToPxY(shot.ftY) + 5}
+                          stroke="red"
+                          strokeWidth="2"
+                          opacity="0.5"
+                        />
+                        <line
+                          x1={ftToPxX(shot.ftX) + 5}
+                          y1={ftToPxY(shot.ftY) - 5}
+                          x2={ftToPxX(shot.ftX) - 5}
+                          y2={ftToPxY(shot.ftY) + 5}
+                          stroke="red"
+                          strokeWidth="2"
+                          opacity="0.5"
+                        />
+                      </>
+                    )}
+                  </>
                 )}
                 {debug && !shot.isFreeThrow && (
                   <>
@@ -327,7 +362,8 @@ export default function Court({
                       x={ftToPxX(shot.ftX) + 8}
                       y={ftToPxY(shot.ftY) - 8}
                       fontSize={10}
-                      fill="#222">
+                      fill="#222"
+                    >
                       {shot.is3 ? "3PT" : "2PT"} ({Math.round(shot.distFt)})
                     </text>
                   </>
@@ -474,7 +510,15 @@ export default function Court({
           <h3>Shot Result</h3>
           <ul>
             <li>
-              <button onClick={() => finalizeShot(true)}>Made</button>
+              <button
+                onClick={() => {
+                  // If shot is made, go to assist selection
+                  setPendingShot({ ...pendingShot, made: true });
+                  setPopupStep("assist");
+                }}
+              >
+                Made
+              </button>
             </li>
             <li>
               <button onClick={() => finalizeShot(false)}>Missed</button>
@@ -490,6 +534,40 @@ export default function Court({
               </button>
             </li>
           </ul>
+        </div>
+      )}
+      {/* Popup: assist selection */}
+      {popupStep === "assist" && pendingShot && (
+        <div className="popup">
+          <h3>Select Assister</h3>
+          <ul>
+            {(pendingShot.courtSide === "away"
+              ? activeAwayPlayers
+              : activeHomePlayers
+            )
+              .filter((p) => p.id !== pendingShot.playerId) // exclude shooter
+              .map((p) => (
+                <li key={p.id}>
+                  <button
+                    onClick={() => finalizeShot(true, p.id)}
+                  >
+                    #{p.number} - {p.name}
+                  </button>
+                </li>
+              ))}
+          </ul>
+
+          {/* No assist option */}
+          <button onClick={() => finalizeShot(true, null)}>No Assist</button>
+
+          <button
+            onClick={() => {
+              setPendingShot(null);
+              setPopupStep(null);
+            }}
+          >
+            Cancel
+          </button>
         </div>
       )}
     </div>
