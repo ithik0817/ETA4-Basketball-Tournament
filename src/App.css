@@ -6,7 +6,7 @@
   min-height: 100vh;
 }
 
-@media (max-width: 1300px) {
+@media (max-width: 900px) {
   #root {
     width: 100%;
   }
@@ -161,7 +161,7 @@ header > h1 {
   overflow-x: auto;
 }
 
-@media (max-width: 768px) {
+@media (max-width: 900px) {
   .game-layout-container {
     flex-direction: column;
     overflow-x: visible;

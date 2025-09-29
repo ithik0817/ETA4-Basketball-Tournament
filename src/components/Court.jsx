@@ -17,8 +17,6 @@ export default function Court({
   homeTeamName,
   awayTeamName,
 }) {
-  console.log("activeHomePlayers",activeHomePlayers)
-  console.log("activeAwayPlayers",activeAwayPlayers)
 
   const svgRef = useRef(null);
   const [debug, setDebug] = useState(false);
@@ -153,10 +151,12 @@ export default function Court({
   }
 
   function finalizeShot(made, assistPlayerId = null) {
-    const { ftX, ftY, playerId, teamId, courtSide, flipCourt, isFreeThrow } = pendingShot;
-   
+    const { ftX, ftY, playerId, teamId, courtSide, flipCourt, isFreeThrow, isBeyondHalfCourt } = pendingShot;
+
     let newShot;
+
     if (isFreeThrow) {
+      // Free throw branch
       newShot = {
         id: Date.now().toString(),
         playerId,
@@ -169,34 +169,65 @@ export default function Court({
         flipCourt,
         assistPlayerId,
       };
+    } else if (isBeyondHalfCourt) {
+      // Beyond half court branch
+      newShot = {
+        id: Date.now().toString(),
+        playerId,
+        teamId,
+        isFreeThrow: false,
+        isBeyondHalfCourt: true,
+        ftX,
+        ftY,
+        is3: true,
+        distFt: 75, // lock in
+        made,
+        points: 3,
+        quarter,
+        assistPlayerId,
+      };
     } else {
+      // Normal field goal branch
       const { is3, distFt, inCorner3, behindArc } = computeIsThree(ftX, ftY, courtSide, flipCourt);
       const points = is3 ? 3 : 2;
 
       newShot = {
-      id: Date.now().toString(),
-      playerId,
-      teamId,
-      isFreeThrow: false,
-      ftX,
-      ftY,
-      is3,
-      distFt,
-      courtSide,
-      flipCourt,
-      inCorner3,
-      behindArc,
-      made,
-      points,
-      quarter,
-      assistPlayerId,
-    };
-  }
+        id: Date.now().toString(),
+        playerId,
+        teamId,
+        isFreeThrow: false,
+        ftX,
+        ftY,
+        is3,
+        distFt,
+        courtSide,
+        flipCourt,
+        inCorner3,
+        behindArc,
+        made,
+        points,
+        quarter,
+        assistPlayerId,
+      };
+    }
+
     onAddShot(newShot);
     setPendingShot(null);
     setPopupStep(null);
-    console.log(newShot)
+    console.log("newShot", newShot)
   }
+
+  function getTargetRimByTeam(teamId, flip) {
+    const isHomeTeam = teamId === homeTeamId;
+    // if not flipped: home -> left rim, away -> right rim
+    // if flipped: home -> right rim, away -> left rim
+    if (!flip) {
+      return isHomeTeam ? rimLeftPx : rimRightPx;
+    } else {
+      return isHomeTeam ? rimRightPx : rimLeftPx;
+    }
+  }
+
 
   const rightColumnPlayers = (flipCourt ? activeHomePlayers : activeAwayPlayers)
     .map(p => ({ ...p, teamId: flipCourt ? homeTeamId : awayTeamId }));
@@ -307,10 +338,19 @@ export default function Court({
 
         {/* Shots render marker*/}
         {shots.map((shot) => {
-            const isAway = shot.courtSide === "away";
-            const shotFlipCourt = shot.flipCourt !== undefined ? shot.flipCourt : false;
-            const targetRimX = shotFlipCourt ? (isAway ? rimLeftPx.x : rimRightPx.x) : (isAway ? rimRightPx.x : rimLeftPx.x);
-            const targetRimY = shotFlipCourt ? (isAway ? rimLeftPx.y : rimRightPx.y) : (isAway ? rimRightPx.y : rimLeftPx.y);
+          // Decide which rim to draw to using teamId and flipCourt
+          const shotFlip = shot.flipCourt ?? false;
+          // If for some reason teamId is missing, fallback to using courtSide (legacy)
+          const rim = shot.teamId
+            ? getTargetRimByTeam(shot.teamId, shotFlip)
+            : (shot.courtSide === "away"
+                ? (shotFlip ? rimLeftPx : rimRightPx)
+                : (shotFlip ? rimRightPx : rimLeftPx)
+              );
+
+          const targetRimX = rim.x;
+          const targetRimY = rim.y;
+
             return (
               <g key={shot.id}>
                 {!shot.isFreeThrow && (
@@ -380,6 +420,20 @@ export default function Court({
         onPointerDown={(e) => e.stopPropagation()}
       >
         <button
+          className="game-control-btn"
+          onClick={() => {
+            setPendingShot({
+              ftX: COURT_WIDTH_FT / 2,
+              ftY: COURT_HEIGHT_FT / 2,
+              isBeyondHalfCourt: true,
+              flipCourt,
+            });
+            setPopupStep("player");
+          }}
+        >
+          Beyond Half Court
+        </button>
+        <button
           className={`game-control-btn ${
             selectedControl === "debug" ? "selected" : ""
           }`}
@@ -400,7 +454,10 @@ export default function Court({
         <button
           className="game-control-btn"
           onClick={() => {
-            setPendingShot({ isFreeThrow: true, flipCourt });
+            setPendingShot({ 
+              isFreeThrow: true,
+              flipCourt
+            });
             setPopupStep("player");
           }}
         >
@@ -413,13 +470,14 @@ export default function Court({
         <div className="popup">
           {pendingShot.isFreeThrow ? (
             <h3>Select Shooter (Free Throw)</h3>
+          ) : pendingShot.isBeyondHalfCourt ? (
+            <h3>Select Shooter (Beyond Half Court)</h3>
           ) : (
             <h3>
               Select Shooter (
               {pendingShot.courtSide === "away" ? awayTeamName : homeTeamName})
             </h3>
           )}
-
           {pendingShot.isFreeThrow ? (
             <div className="free-throw-columns">
               <div className="team-column">
@@ -466,7 +524,54 @@ export default function Court({
                 </ul>
               </div>
             </div>
-          ) : (
+            ) : pendingShot.isBeyondHalfCourt ? (
+              // show both teams since court side is unknown
+              <div className="free-throw-columns">
+                <div className="team-column">
+                  <h4>{flipCourt ? awayTeamName : homeTeamName }</h4>
+                  <ul>
+                    {leftColumnPlayers.map((p) => (
+                      <li key={p.id}>
+                        <button
+                          onClick={() => {
+                            setPendingShot({
+                              ...pendingShot,
+                              playerId: p.id,
+                              teamId: p.teamId,
+                            });
+                            setPopupStep("result");
+                          }}
+                        >
+                          #{p.number} - {p.name}
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+
+                <div className="team-column">
+                  <h4>{flipCourt ? homeTeamName : awayTeamName}</h4>
+                  <ul>
+                    {rightColumnPlayers.map((p) => (
+                      <li key={p.id}>
+                        <button
+                          onClick={() => {
+                            setPendingShot({
+                              ...pendingShot,
+                              playerId: p.id,
+                              teamId: p.teamId,
+                            });
+                            setPopupStep("result");
+                          }}
+                        >
+                          #{p.number} - {p.name}
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            ) : (
             <ul>
               {(pendingShot.courtSide === "away"
                 ? activeAwayPlayers
@@ -512,9 +617,12 @@ export default function Court({
             <li>
               <button
                 onClick={() => {
-                  // If shot is made, go to assist selection
-                  setPendingShot({ ...pendingShot, made: true });
-                  setPopupStep("assist");
+                  if (pendingShot.isFreeThrow) {
+                    finalizeShot(true);
+                  } else {
+                    setPendingShot({ ...pendingShot, made: true });
+                    setPopupStep("assist");
+                  }
                 }}
               >
                 Made
@@ -541,11 +649,11 @@ export default function Court({
         <div className="popup">
           <h3>Select Assister</h3>
           <ul>
-            {(pendingShot.courtSide === "away"
+            {(pendingShot.teamId === awayTeamId
               ? activeAwayPlayers
               : activeHomePlayers
             )
-              .filter((p) => p.id !== pendingShot.playerId) // exclude shooter
+              .filter((p) => p.id !== pendingShot.playerId)
               .map((p) => (
                 <li key={p.id}>
                   <button
@@ -558,7 +666,9 @@ export default function Court({
           </ul>
 
           {/* No assist option */}
-          <button onClick={() => finalizeShot(true, null)}>No Assist</button>
+          <button onClick={() => finalizeShot(true, null)}>
+              No Assist
+          </button>
 
           <button
             onClick={() => {
