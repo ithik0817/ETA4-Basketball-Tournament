@@ -47,14 +47,23 @@ export default function Court({
   const BottomYPx = ftToPxY(BottomY);
   const RightXPx = ftToPxX(RightX);
 
-  // keep reference to visible players during popup
   const [popupPlayers, setPopupPlayers] = useState([]);
 
-  // handle keyboard shortcuts
+  const handleCancel = useCallback(() => {
+    setPendingShot(null);
+    setPopupStep(null);
+  }, []);
+
   const handleKeyDown = useCallback((e) => {
+    // If the Escape key is pressed, always cancel the popup, regardless of the current step
+    if (e.key === "Escape") {
+      handleCancel();
+      return; // Exit the function to prevent further processing
+    }
+
+    // Only proceed with digit shortcuts if we are on the correct step
     if (popupStep !== "player") return;
 
-    // only support 1–9 for now
     if (e.code.startsWith("Digit")) {
       const idx = parseInt(e.key, 10) - 1; // 1→0 index
       if (!isNaN(idx) && idx >= 0 && idx < popupPlayers.length) {
@@ -69,7 +78,7 @@ export default function Court({
         }
       }
     }
-  }, [popupStep, popupPlayers, pendingShot]);
+  }, [popupStep, popupPlayers, pendingShot, handleCancel]);
 
   useEffect(() => {
     window.addEventListener("keydown", handleKeyDown);
@@ -639,18 +648,6 @@ export default function Court({
                       </button>
                     </li>
                   ))}
-
-                  {/* Cancel option as the last index */}
-                  <li>
-                    <button
-                      onClick={() => {
-                        setPendingShot(null);
-                        setPopupStep(null);
-                      }}
-                    >
-                      ({leftColumnPlayers.length + rightColumnPlayers.length + 1}) - Cancel
-                    </button>
-                  </li>
                 </ul>
               </div>
             </div>
@@ -703,66 +700,50 @@ export default function Court({
               </div>
             </div>
             ) : (
-            <ul>
+            <ul> 
               {(pendingShot.courtSide === "away"
-                ? activeAwayPlayers
-                : activeHomePlayers
+                ? activeAwayPlayers 
+                : activeHomePlayers 
               ).map((p, index, arr) => {
                 // populate popupPlayers once when list is rendered
                 if (popupPlayers.length !== arr.length) {
-                  setPopupPlayers(
+                  setPopupPlayers( 
                     arr.map((pp) => ({
                       ...pp,
-                      teamId: pendingShot.courtSide === "away" ? awayTeamId : homeTeamId,
-                    }))
-                  );
-                }
-
-                return (
+                      teamId: pendingShot.courtSide === "away" 
+                        ? awayTeamId 
+                        : homeTeamId, 
+                    })) 
+                  ); 
+                } 
+                
+                return ( 
                   <li key={p.id}>
-                    <button
-                      onClick={() => {
-                        setPendingShot({
-                          ...pendingShot,
-                          playerId: p.id,
-                          teamId:
-                            pendingShot.courtSide === "away" ? awayTeamId : homeTeamId,
-                        });
-                        setPopupStep("result");
-                      }}
-                    >
-                      ({index + 1}) - {p.name} ({p.number})
+                    <button 
+                      onClick={() => { 
+                        setPendingShot({ 
+                          ...pendingShot, 
+                          playerId: p.id, 
+                          teamId: pendingShot.courtSide === "away" 
+                            ? awayTeamId
+                            : homeTeamId, 
+                        }); 
+                        setPopupStep("result"); 
+                      }} 
+                    > 
+                      ({index + 1}) - #{p.number} {p.name} 
                     </button>
                   </li>
                 );
               })}
-
-              {/* Add cancel as last indexed option */}
-              <li>
-                <button
-                  onClick={() => {
-                    setPendingShot(null);
-                    setPopupStep(null);
-                  }}
-                >
-                  ({(pendingShot.courtSide === "away"
-                    ? activeAwayPlayers.length
-                    : activeHomePlayers.length) + 1}) - Cancel
-                </button>
-              </li>
             </ul>
           )}
-          {/*
-          <button
-            onClick={() => {
-              setPendingShot(null);
-              setPopupStep(null);
-            }}
-          >
+          
+          <button onClick={handleCancel}>
             Cancel
-          </button>*/}
-        </div>
-      )}
+          </button>
+          </div>
+        )}
       
       {/* Popup: result */}
       {popupStep === "result" && pendingShot && (
@@ -787,12 +768,7 @@ export default function Court({
               <button onClick={() => finalizeShot(false)}>Missed</button>
             </li>
             <li>
-              <button
-                onClick={() => {
-                  setPendingShot(null);
-                  setPopupStep(null);
-                }}
-              >
+              <button onClick={handleCancel}>
                 Cancel
               </button>
             </li>
@@ -825,12 +801,7 @@ export default function Court({
               No Assist
           </button>
 
-          <button
-            onClick={() => {
-              setPendingShot(null);
-              setPopupStep(null);
-            }}
-          >
+          <button onClick={handleCancel}>
             Cancel
           </button>
         </div>

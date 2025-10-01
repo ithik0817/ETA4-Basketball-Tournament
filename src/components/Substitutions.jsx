@@ -7,8 +7,8 @@ export const Substitutions = ({
   activePlayers,
   onSub,
   teamId,
-  setPendingBenchSub,
-  pendingBenchSub
+  setPendingBenchSubs, // Changed from single to multiple subs
+  pendingBenchSubs, // Changed from single to multiple subs
 }) => {
 
   const [selectedBenchPlayer, setSelectedBenchPlayer] = useState(null);
@@ -16,14 +16,24 @@ export const Substitutions = ({
   const benchPlayers = fullRoster
     .filter((player) => !activePlayers.some((p) => p.id === player.id))
     .sort((a, b) => a.number - b.number);
-
+  
   const handleBenchClick = (player) => {
-    if (pendingBenchSub && pendingBenchSub.id === player.id) {
-      setPendingBenchSub(null);
-    } else {
-      setPendingBenchSub({ ...player, teamId });
+    // Check if a bench player from the other team is already selected
+    if (pendingBenchSubs.length > 0 && pendingBenchSubs[0].teamId !== teamId) {
+      alert("Please unselect players from the other team first.");
+      return;
     }
-    setSelectedBenchPlayer((prev) => (prev && prev.id === player.id ? null : player));
+
+    // Toggle player selection
+    if (pendingBenchSubs.some((p) => p.id === player.id)) {
+      // Remove player if already selected
+      setPendingBenchSubs((prev) => prev.filter((p) => p.id !== player.id));
+    } else if (pendingBenchSubs.length < 5) {
+      // Add player if less than 5 are already selected
+      setPendingBenchSubs((prev) => [...prev, { ...player, teamId }]);
+    } else {
+      alert("You can select a maximum of 5 bench players.");
+    }
   };
 
   return (
@@ -36,18 +46,19 @@ export const Substitutions = ({
         {teamName} Bench
       </h3>
       <div className="bench-players">
-        {benchPlayers.map((player) => (
-          <li key={player.id}>
-            <button
-              className={`bench-player-btn ${
-                pendingBenchSub?.id === player.id ? "selected" : ""
-              }`}
-              onClick={() => handleBenchClick(player)}
-            >
-              #{player.number} - {player.name}
-            </button>
-          </li>
-        ))}
+        {benchPlayers.map((player) => {
+          const isSelected = pendingBenchSubs.some((p) => p.id === player.id);
+          return (
+            <li key={player.id}>
+              <button
+                className={`bench-player-btn ${isSelected ? "selected" : ""}`}
+                onClick={() => handleBenchClick(player)}
+              >
+                #{player.number} - {player.name}
+              </button>
+            </li>
+          );
+        })}
       </div>
     </div>
   );

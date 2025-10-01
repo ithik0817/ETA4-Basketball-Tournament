@@ -33,7 +33,7 @@ function App() {
   const [awayTeamName, setAwayTeamName] = useState("");
   const [selectedTeamId, setSelectedTeamId] = useState(null);
   const [roster, setRoster] = useState([]);
-  const [pendingBenchSub, setPendingBenchSub] = useState(null);
+  const [pendingBenchSubs, setPendingBenchSubs] = useState([]);
   const [selectedTournament, setSelectedTournament] = useState(null);
   const [activeAwayPlayers, setActiveAwayPlayers] = useState(awayRoster.slice(0, 5));
   const [activeHomePlayers, setActiveHomePlayers] = useState(homeRoster.slice(0, 5));
@@ -58,20 +58,33 @@ function App() {
       return dateA.getTime() - dateB.getTime();
     });
   }, [shots]);
-  const handleSub = (teamId, playerOutId, playerInId) => {
-    const rosterToUpdate = teamId === awayTeamId ? activeAwayPlayers : activeHomePlayers;
+  const handleSub = useCallback((teamId, activePlayerIds, benchPlayerIds) => {
     const setRosterState = teamId === awayTeamId ? setActiveAwayPlayers : setActiveHomePlayers;
     const fullRoster = teamId === awayTeamId ? awayRoster : homeRoster;
-    const playerOut = rosterToUpdate.find(p => p.id === playerOutId);
-    const playerIn = fullRoster.find(p => p.id === playerInId);
-    if (playerOut && playerIn) {
-        const newActiveRoster = rosterToUpdate.map(player => 
-            player.id === playerOutId ? playerIn : player
-        );
-        newActiveRoster.sort((a, b) => a.number - b.number);
-        setRosterState(newActiveRoster);
-    }
-  };
+
+    setRosterState(prevRoster => {
+        let newRoster = [...prevRoster];
+        const playersToSubIn = benchPlayerIds.map(id => fullRoster.find(p => p.id === id));
+        
+        // Check if the number of players to sub in and out is the same
+        if (activePlayerIds.length !== playersToSubIn.length) {
+            console.error("Mismatch in number of players for substitution.");
+            return prevRoster;
+        }
+
+        // Perform the substitution
+        activePlayerIds.forEach((outId, index) => {
+            const playerIn = playersToSubIn[index];
+            const playerOutIndex = newRoster.findIndex(p => p.id === outId);
+            if (playerOutIndex !== -1 && playerIn) {
+                newRoster[playerOutIndex] = playerIn;
+            }
+        });
+
+        newRoster.sort((a, b) => a.number - b.number);
+        return newRoster;
+    });
+  }, [awayTeamId, awayRoster, homeRoster]); // Dependencies for useCallback
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
@@ -380,8 +393,8 @@ function App() {
                               team={awayTeamName}
                               teamId={awayTeamId}
                               onSub={handleSub}
-                              pendingBenchSub={pendingBenchSub}
-                              setPendingBenchSub={setPendingBenchSub}
+                              pendingBenchSubs={pendingBenchSubs}
+                              setPendingBenchSubs={setPendingBenchSubs}
                             />
                           </>
                         ) : (
@@ -397,8 +410,8 @@ function App() {
                               team={homeTeamName}
                               teamId={homeTeamId}
                               onSub={handleSub}
-                              pendingBenchSub={pendingBenchSub}
-                              setPendingBenchSub={setPendingBenchSub}
+                              pendingBenchSubs={pendingBenchSubs}
+                              setPendingBenchSubs={setPendingBenchSubs}
                             />
                           </>
                         )}
@@ -430,8 +443,8 @@ function App() {
                               team={homeTeamName}
                               teamId={homeTeamId}
                               onSub={handleSub}
-                              pendingBenchSub={pendingBenchSub}
-                              setPendingBenchSub={setPendingBenchSub}
+                              pendingBenchSubs={pendingBenchSubs}
+                              setPendingBenchSubs={setPendingBenchSubs}
                             />
                           </>
                         ) : (
@@ -447,8 +460,8 @@ function App() {
                               team={awayTeamName}
                               teamId={awayTeamId}
                               onSub={handleSub}
-                              pendingBenchSub={pendingBenchSub}
-                              setPendingBenchSub={setPendingBenchSub}
+                              pendingBenchSubs={pendingBenchSubs}
+                              setPendingBenchSubs={setPendingBenchSubs}
                             />
                           </>
                         )}
@@ -466,8 +479,8 @@ function App() {
                           fullRoster={awayRoster}
                           activePlayers={activeAwayPlayers}
                           onSub={handleSub}
-                          setPendingBenchSub={setPendingBenchSub}
-                          pendingBenchSub={pendingBenchSub}
+                          pendingBenchSubs={pendingBenchSubs}
+                          setPendingBenchSubs={setPendingBenchSubs}
                         />
                         {/* Home bench players lists here */}
                         <Substitutions
@@ -476,8 +489,8 @@ function App() {
                           fullRoster={homeRoster}
                           activePlayers={activeHomePlayers}
                           onSub={handleSub}
-                          setPendingBenchSub={setPendingBenchSub}
-                          pendingBenchSub={pendingBenchSub}
+                          pendingBenchSubs={pendingBenchSubs}
+                          setPendingBenchSubs={setPendingBenchSubs}
                         />
                       </>
                     ) : (
@@ -489,8 +502,8 @@ function App() {
                           fullRoster={homeRoster}
                           activePlayers={activeHomePlayers}
                           onSub={handleSub}
-                          setPendingBenchSub={setPendingBenchSub}
-                          pendingBenchSub={pendingBenchSub}
+                          pendingBenchSubs={pendingBenchSubs}
+                          setPendingBenchSubs={setPendingBenchSubs}
                         />
                         {/* Away bench players lists here */}
                         <Substitutions
@@ -499,8 +512,8 @@ function App() {
                           fullRoster={awayRoster}
                           activePlayers={activeAwayPlayers}
                           onSub={handleSub}
-                          setPendingBenchSub={setPendingBenchSub}
-                          pendingBenchSub={pendingBenchSub}
+                          pendingBenchSubs={pendingBenchSubs}
+                          setPendingBenchSubs={setPendingBenchSubs}
                         />
                       </>
                     )}
