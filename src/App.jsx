@@ -537,18 +537,37 @@ function App() {
                           return (
                             <li key={s.id} className={s.made ? "bold" : ""}>
                               {teamName} {player?.name || "Unknown"}{" "}
-                              {s.made ? "makes a" : "misses a"}{" "}
-                              {s.isFreeThrow
-                                ? "free throw for 1 point"
-                                : `${Math.round(s.distFt)}-foot ${s.is3 ? "3-pointer" : "2-pointer"}`}
-                              {s.made && s.assistPlayerId && (
-                                <> (assist by { 
-                                      homeRoster.find(p => p.id === s.assistPlayerId)?.name ||
-                                      awayRoster.find(p => p.id === s.assistPlayerId)?.name ||
-                                      "Unknown"
-                                    })</>
+
+                              {s.type === "shot" && (
+                                  <>
+                                      {s.made ? "makes a" : "misses a"}{" "}
+                                      {`${Math.round(s.distFt)}-foot ${s.is3 ? "3-pointer" : 
+                                        "2-pointer"}`}
+                                      {s.made && s.assistPlayerId && (
+                                          <>
+                                              {" "}
+                                              (assist by{" "}
+                                              <em>
+                                                  {homeRoster.find(p => p.id === s.assistPlayerId)?.name ||
+                                                  awayRoster.find(p => p.id === s.assistPlayerId)?.name ||
+                                                  "Unknown"}
+                                              </em>
+                                              )
+                                          </>
+                                      )}
+                                  </>
                               )}
-                            </li>
+                              {s.type === "freeThrow" && (
+                                  <>
+                                      {s.made ? "makes a free throw for 1 point" : 
+                                      "misses a free throw for 1 point"}{" "}
+                                  </>
+                              )}
+
+                              {s.type === "offRebound" && "grabs an offensive rebound"}
+                              {s.type === "defRebound" && "grabs a defensive rebound"}
+                              {s.type === "turnover" && "turns the ball over"}
+                          </li>
                           );
                         })}
                     </ul>
