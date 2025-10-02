@@ -393,8 +393,10 @@ function App() {
                               team={awayTeamName}
                               teamId={awayTeamId}
                               onSub={handleSub}
+                              onAddShot={handleAddShot}
                               pendingBenchSubs={pendingBenchSubs}
                               setPendingBenchSubs={setPendingBenchSubs}
+                              quarter={currentQuarter}
                             />
                           </>
                         ) : (
@@ -410,8 +412,10 @@ function App() {
                               team={homeTeamName}
                               teamId={homeTeamId}
                               onSub={handleSub}
+                              onAddShot={handleAddShot}
                               pendingBenchSubs={pendingBenchSubs}
                               setPendingBenchSubs={setPendingBenchSubs}
+                              quarter={currentQuarter}
                             />
                           </>
                         )}
@@ -443,6 +447,8 @@ function App() {
                               team={homeTeamName}
                               teamId={homeTeamId}
                               onSub={handleSub}
+                              quarter={currentQuarter}
+                              onAddShot={handleAddShot}
                               pendingBenchSubs={pendingBenchSubs}
                               setPendingBenchSubs={setPendingBenchSubs}
                             />
@@ -460,6 +466,8 @@ function App() {
                               team={awayTeamName}
                               teamId={awayTeamId}
                               onSub={handleSub}
+                              quarter={currentQuarter}
+                              onAddShot={handleAddShot}
                               pendingBenchSubs={pendingBenchSubs}
                               setPendingBenchSubs={setPendingBenchSubs}
                             />

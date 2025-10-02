@@ -556,7 +556,7 @@ export default function Court({
         >
           Beyond Half Court
         </button>
-
+        {/* 
         <button
           className="game-control-btn"
           onClick={() => {
@@ -582,9 +582,9 @@ export default function Court({
         >
           Turnover
         </button>
-
+        */}
       </div>
-
+      
       {/* Popup: active player selection */}
       {popupStep === "player" && pendingShot && (
         <div className="popup">
