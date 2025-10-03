@@ -526,7 +526,7 @@ export default function Court({
           onClick={() => onUndo()}
           disabled={shots.length === 0}
         >
-          Undo Last Shot
+          Undo
         </button>
 
         <button

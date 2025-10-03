@@ -1,5 +1,7 @@
 // src/components/Substitutions.jsx
 import React, { useState } from "react";
+import { db } from "../firebase";
+import { collection, addDoc } from "firebase/firestore";
 
 export const Substitutions = ({
   teamName,
@@ -9,6 +11,9 @@ export const Substitutions = ({
   teamId,
   setPendingBenchSubs, // Changed from single to multiple subs
   pendingBenchSubs, // Changed from single to multiple subs
+  onAddShot,
+  quarter,
+  usedTimeouts,
 }) => {
 
   const [selectedBenchPlayer, setSelectedBenchPlayer] = useState(null);
@@ -36,15 +41,46 @@ export const Substitutions = ({
     }
   };
 
+  const handleTimeout = () => {
+    if (usedTimeouts >= 6) {
+      alert("No more timeouts available for this team.");
+      return;
+    }
+
+    const newTimeout = {
+      type: "timeOut",
+      teamId,
+      quarter,
+      createdAt: new Date(),
+      message: `Timeout called by ${teamName}`, 
+    };
+
+    if (onAddShot) {
+      onAddShot(newTimeout);
+    }
+  };
+
   return (
     <div className="sub-container">
       <h3 style={{ 
         textAlign: "center", 
         marginTop: 0, 
-        marginBottom: 10
+        marginBottom: 0
       }}>
         {teamName} Bench
       </h3>
+      <div className="timeout-controls">
+        <button
+          className="timeout-btn"
+          onClick={handleTimeout}
+          disabled={usedTimeouts >= 6}
+        >
+          Timeout
+        </button>
+        <span className="timeout-count">
+          Used: {usedTimeouts} / 6
+        </span>
+      </div>
       <div className="bench-players">
         {benchPlayers.map((player) => {
           const isSelected = pendingBenchSubs.some((p) => p.id === player.id);

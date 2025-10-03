@@ -34,9 +34,14 @@ export default function Stats({ players, shots, team }) {
       const freeThrowM = playerShots.filter((s) => s.points === 1 && s.made).length;
       const freeThrowPct = freeThrowA > 0 ? ((freeThrowM / freeThrowA) * 100).toFixed(1) : "0.0";
 
-      const oreb = playerShots.filter((s) => s.type === "offRebound").length;
+      const oReb = playerShots.filter((s) => s.type === "offRebound").length;
+      const dReb = playerShots.filter((s) => s.type === "defRebound").length;
+      const reb = oReb + dReb;
       const assists = shots.filter((s) => s.assistPlayerId === p.id).length;
-      const turnOver = playerShots.filter((s) => s.type === "turnover").length;
+      const stl = playerShots.filter((s) => s.type === "steal").length;
+      const blk = playerShots.filter((s) => s.type === "block").length;
+      const turnOver = playerShots.filter((s) => s.type === "turnOver").length;
+      const pf = playerShots.filter((s) => s.type === "foul").length;
       
       const pts = playerShots.reduce((sum, s) => sum + (s.made ? s.points : 0), 0);
 
@@ -59,9 +64,14 @@ export default function Stats({ players, shots, team }) {
         freeThrowM,
         freeThrowPct,
 
-        oreb,
+        oReb,
+        dReb,
+        reb,
         assists,
+        stl,
+        blk,
         turnOver,
+        pf,
         
         pts,
       };
@@ -84,9 +94,14 @@ export default function Stats({ players, shots, team }) {
         freeThrowM: sum.freeThrowM + p.freeThrowM,
         freeThrowA: sum.freeThrowA + p.freeThrowA,
 
-        oreb: sum.oreb + p.oreb,
+        oReb: sum.oReb + p.oReb,
+        dReb: sum.dReb + p.dReb,
+        reb: sum.reb + p.reb,
         assists: sum.assists + p.assists,
+        stl: sum.stl + p.stl,
+        blk: sum.blk + p.blk,
         turnOver: sum.turnOver + p.turnOver,
+        pf: sum.pf + p.pf,
         
         pts: sum.pts + p.pts,
       }),
@@ -103,9 +118,14 @@ export default function Stats({ players, shots, team }) {
         freeThrowM: 0,
         freeThrowA: 0,
 
-        oreb: 0,
+        oReb: 0,
+        dReb: 0,
+        reb: 0,
         assists: 0,
+        stl: 0,
+        blk: 0,
         turnOver: 0,
+        pf: 0,
 
         pts: 0
         }
@@ -140,9 +160,14 @@ export default function Stats({ players, shots, team }) {
         <td>{stats.freeThrowA ?? 0}-{stats.freeThrowA ?? 0}</td>
         <td>{stats.freeThrowPct ?? "0.0"}%</td>
 
-        <td>{stats.oreb ?? 0}</td>
+        <td>{stats.oReb ?? 0}</td>
+        <td>{stats.dReb ?? 0}</td>
+        <td>{stats.reb ?? 0}</td>
         <td>{stats.assists ?? 0}</td>
+        <td>{stats.stl ?? 0}</td>
+        <td>{stats.blk ?? 0}</td>
         <td>{stats.turnOver ?? 0}</td>
+        <td>{stats.pf ?? 0}</td>
 
         <td>{stats.pts ?? 0}</td>
       </tr>
@@ -173,8 +198,13 @@ export default function Stats({ players, shots, team }) {
               <th>FT%</th>
 
               <th>OREB</th>
+              <th>DREB</th>
+              <th>REB</th>
               <th>AST</th>
+              <th>STL</th>
+              <th>BLK</th>
               <th>TO</th>
+              <th>PF</th>
               
               <th>PTS</th>
             </tr>
@@ -201,9 +231,14 @@ export default function Stats({ players, shots, team }) {
               <td>{totals.freeThrowM}-{totals.freeThrowA}</td>
               <td>{freeThrowPct}%</td>
               
-              <td>{totals.oreb}</td>
+              <td>{totals.oReb}</td>
+              <td>{totals.dReb}</td>
+              <td>{totals.reb}</td>
               <td>{totals.assists}</td>
+              <td>{totals.stl}</td>
+              <td>{totals.blk}</td>
               <td>{totals.turnOver}</td>
+              <td>{totals.pf}</td>
               
               <td>{totals.pts}</td>
             </tr>

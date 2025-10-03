@@ -84,7 +84,15 @@ function App() {
         newRoster.sort((a, b) => a.number - b.number);
         return newRoster;
     });
-  }, [awayTeamId, awayRoster, homeRoster]); // Dependencies for useCallback
+  }, [awayTeamId, awayRoster, homeRoster]);
+
+  const homeTimeouts = shots.filter(
+    (s) => s.type === "timeOut" && s.teamId === homeTeamId
+  ).length;
+
+  const awayTimeouts = shots.filter(
+    (s) => s.type === "timeOut" && s.teamId === awayTeamId
+  ).length;
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
@@ -226,7 +234,7 @@ function App() {
     });
 
     return () => unsubscribe();
-}, [selectedTournament, selectedGameId]);
+  }, [selectedTournament, selectedGameId]);
 
   async function handleAddShot(shot) {
     if (!selectedGameId) {
@@ -487,8 +495,11 @@ function App() {
                           fullRoster={awayRoster}
                           activePlayers={activeAwayPlayers}
                           onSub={handleSub}
+                          quarter={currentQuarter}
+                          onAddShot={handleAddShot}
                           pendingBenchSubs={pendingBenchSubs}
                           setPendingBenchSubs={setPendingBenchSubs}
+                          usedTimeouts={awayTimeouts}
                         />
                         {/* Home bench players lists here */}
                         <Substitutions
@@ -497,8 +508,11 @@ function App() {
                           fullRoster={homeRoster}
                           activePlayers={activeHomePlayers}
                           onSub={handleSub}
+                          quarter={currentQuarter}
+                          onAddShot={handleAddShot}
                           pendingBenchSubs={pendingBenchSubs}
                           setPendingBenchSubs={setPendingBenchSubs}
+                          usedTimeouts={homeTimeouts}
                         />
                       </>
                     ) : (
@@ -510,8 +524,11 @@ function App() {
                           fullRoster={homeRoster}
                           activePlayers={activeHomePlayers}
                           onSub={handleSub}
+                          quarter={currentQuarter}
+                          onAddShot={handleAddShot}
                           pendingBenchSubs={pendingBenchSubs}
                           setPendingBenchSubs={setPendingBenchSubs}
+                          usedTimeouts={homeTimeouts}
                         />
                         {/* Away bench players lists here */}
                         <Substitutions
@@ -520,8 +537,11 @@ function App() {
                           fullRoster={awayRoster}
                           activePlayers={activeAwayPlayers}
                           onSub={handleSub}
+                          quarter={currentQuarter}
+                          onAddShot={handleAddShot}
                           pendingBenchSubs={pendingBenchSubs}
                           setPendingBenchSubs={setPendingBenchSubs}
+                          usedTimeouts={awayTimeouts}
                         />
                       </>
                     )}
@@ -557,6 +577,12 @@ function App() {
 
                           return (
                             <li key={s.id} className={s.made ? "bold" : ""}>
+                              {s.type === "timeOut" ? (
+                                <>
+                                  {teamName} calls a timeout.
+                                </>
+                              ) : (
+                                <>
                               {teamName} {player?.name || "Unknown"}{" "}
 
                               {s.type === "shot" && (
@@ -580,14 +606,19 @@ function App() {
                               )}
                               {s.type === "freeThrow" && (
                                   <>
-                                      {s.made ? "makes a free throw for 1 point" : 
+                                      {s.made ? "makes a free throw for 1 point." : 
                                       "misses a free throw for 1 point"}{" "}
                                   </>
                               )}
 
                               {s.type === "offRebound" && "grabs an offensive rebound"}
                               {s.type === "defRebound" && "grabs a defensive rebound"}
-                              {s.type === "turnover" && "turns the ball over"}
+                              {s.type === "turnOver" && "turns the ball over"}
+                              {s.type === "foul" && "commits a foul"}
+                              {s.type === "steal" && "comes up with a steal."}
+                              {s.type === "block" && "blocks the shot."}
+                              </>
+                             )} 
                           </li>
                           );
                         })}

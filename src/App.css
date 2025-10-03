@@ -176,6 +176,7 @@ header > h1 {
 }
 
 .players-container button{
+  font-size: smaller;
   width: 150px;
   height: 50px;
 }
@@ -399,20 +400,81 @@ header > h1 {
 }
 
 /* Specific variants */
-.mini-btn.reb {
+.mini-btn.Oreb,
+.mini-btn.Dreb
+ {
   background-color: #4caf50; /* green */
   color: white;
 }
 
-.mini-btn.reb:hover {
+.mini-btn.Oreb:hover,
+.mini-btn.Dreb:hover {
   background-color: #45a049;
 }
 
-.mini-btn.to {
+.players-container .mini-btn.to,
+.players-container .mini-btn.pk {
+  width: 20px;
+  height: 20px;
   background-color: #f44336; /* red */
   color: white;
 }
 
-.mini-btn.to:hover {
+.mini-btn.to:hover,
+.mini-btn.pk:hover {
   background-color: #d32f2f;
 }
+
+.players-container .mini-btn.stl,
+.players-container .mini-btn.blk {
+  width: 25px;
+  height: 20px;
+  background-color: #4caf50;
+  color: white;
+}
+
+.mini-btn.stl:hover,
+.mini-btn.blk:hover {
+  background-color: #45a049;
+}
+
+.timeout-controls {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+  margin: 0px 0 5px 0;
+}
+
+.sub-container .timeout-btn {
+  display: flex;
+  width: 60px;
+  height: 20px;
+  background-color: #1976d2;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.2s ease, transform 0.1s ease;
+  font-size: 12px;
+  font-weight: bold;
+  justify-content: center;
+  align-items: center;
+}
+
+.timeout-btn:hover:enabled {
+  background-color: #1565c0;
+}
+
+.timeout-btn:disabled {
+  background-color: #555;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.timeout-count {
+  font-size: 12px;
+  font-weight: 600;
+  color: #ccc;
+}
+

@@ -79,18 +79,18 @@ export default function Players({
       setSelectedActivePlayers((prev) => [...prev, activePlayer]);
     }
   };
-  
+
   return (
     <div className="players-container">
-      <h3 style={{ marginTop: 0, marginBottom: 0, textAlign: "center" }}>{team}</h3>
-      <h4 style={{ marginTop: 0, textAlign: "center" }}>Players (On Floor)</h4>
+      <h3 style={{ marginTop: 0, marginBottom: -5, textAlign: "center" }}>{team}</h3>
+      <h4 style={{ marginTop: 0, marginBottom: 5, textAlign: "center" }}>Players (On Floor)</h4>
+      
       <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
         {players.map((p) => {
           const isSelected = selectedActivePlayers.some((ap) => ap.id === p.id);
           const canClick =
             pendingBenchSubs.length > 0 && pendingBenchSubs[0].teamId === teamId;
           const isDisabled = !canClick;
-
           return (
   <li
     key={p.id}
@@ -123,7 +123,7 @@ export default function Players({
     {/* Inline action buttons */}
     <div style={{ display: "flex", gap: 6 }}>
   <button
-    className="mini-btn reb"
+    className="mini-btn oReb"
     onClick={() =>
       onAddShot &&
       onAddShot({
@@ -141,7 +141,7 @@ export default function Players({
     onClick={() =>
       onAddShot &&
       onAddShot({
-        type: "turnover",
+        type: "turnOver",
         playerId: p.id,
         teamId: teamId,
         quarter: quarter,
@@ -149,6 +149,62 @@ export default function Players({
     }
   >
     TO
+  </button>
+  <button
+    className="mini-btn dReb"
+    onClick={() =>
+      onAddShot &&
+      onAddShot({
+        type: "defRebound",
+        playerId: p.id,
+        teamId: teamId,
+        quarter: quarter,
+      })
+    }
+  >
+    DReb
+  </button>
+  <button
+    className="mini-btn stl"
+    onClick={() =>
+      onAddShot &&
+      onAddShot({
+        type: "steal",
+        playerId: p.id,
+        teamId: teamId,
+        quarter: quarter,
+      })
+    }
+  >
+    STL
+  </button>
+  <button
+    className="mini-btn blk"
+    onClick={() =>
+      onAddShot &&
+      onAddShot({
+        type: "block",
+        playerId: p.id,
+        teamId: teamId,
+        quarter: quarter,
+      })
+    }
+  >
+    BLK
+  </button>
+  <button
+    className="mini-btn pk"
+    onClick={() =>
+      onAddShot &&
+      onAddShot({
+        type: "foul",
+        playerId: p.id,
+        teamId: teamId,
+        quarter: quarter,
+      })
+    }
+  >
+    PF
   </button>
 </div>
   </li>
