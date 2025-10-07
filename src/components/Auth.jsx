@@ -35,7 +35,7 @@ export default function Auth({ user, setUser }) {
       {user ? (
         <>
           <span style={{ marginRight: 8 }}>
-            Welcome!
+            Welcome, {user.role}!
           </span>
           <button 
             className="Auth-button"

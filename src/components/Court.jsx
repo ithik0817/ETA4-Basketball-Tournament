@@ -16,6 +16,7 @@ export default function Court({
   flipCourt,
   homeTeamName,
   awayTeamName,
+  role,
 }) {
 
   const svgRef = useRef(null);
@@ -55,17 +56,15 @@ export default function Court({
   }, []);
 
   const handleKeyDown = useCallback((e) => {
-    // If the Escape key is pressed, always cancel the popup, regardless of the current step
     if (e.key === "Escape") {
       handleCancel();
-      return; // Exit the function to prevent further processing
+      return;
     }
 
-    // Only proceed with digit shortcuts if we are on the correct step
     if (popupStep !== "player") return;
 
     if (e.code.startsWith("Digit")) {
-      const idx = parseInt(e.key, 10) - 1; // 1→0 index
+      const idx = parseInt(e.key, 10) - 1;
       if (!isNaN(idx) && idx >= 0 && idx < popupPlayers.length) {
         const p = popupPlayers[idx];
         if (p) {
@@ -130,10 +129,28 @@ export default function Court({
       courtSide = ftX < COURT_WIDTH_FT / 2 ? "away" : "home";
     }
 
+    const offenseAllowed =
+    (courtSide === "home" && role === "homeOffense") ||
+    (courtSide === "away" && role === "awayOffense") || 
+    role === "admin";
+
+  if (!offenseAllowed ) {
+    if (role === "homeDefense" || role === "awayDefense") {
+      alert(`You are not allowed to track shots.`);
+    }
+    else{
+    const teamName =
+      courtSide === "home" ? homeTeamName : awayTeamName;
+      alert(`You are not allowed to track shots for the ${teamName} team.`);
+    }
+    return;
+  }
+
     console.log("flipCourt:", flipCourt);
     console.log("ftX:", ftX);
     console.log("Court Side determined:", courtSide);
 
+    // If validation passes, proceed with setting the pendingShot
     setPendingShot({
       x: e.clientX,
       y: e.clientY,
@@ -141,7 +158,8 @@ export default function Court({
       ftY,
       courtSide,
       flipCourt,
-      isFreeThrow: false
+      isFreeThrow: false,
+      role
       });
 
     setPopupStep("player");
@@ -213,6 +231,7 @@ export default function Court({
       flipCourt,
       isFreeThrow,
       isBeyondHalfCourt,
+      role,
       isRebound,
       isTurnover,
     } = src;
@@ -233,29 +252,12 @@ export default function Court({
         playerId,
         teamId,
         isFreeThrow: true,
-        made: !!made, // ensure boolean
+        made: !!made,
         points: 1,
         distFt: 15,
         quarter,
         flipCourt,
-      };
-    } else if (isRebound) {
-      newEvent = {
-        id: Date.now().toString(),
-        type: "offRebound",
-        playerId,
-        teamId,
-        quarter,
-        flipCourt,
-      };
-    } else if (isTurnover) {
-      newEvent = {
-        id: Date.now().toString(),
-        type: "turnover",
-        playerId,
-        teamId,
-        quarter,
-        flipCourt,
+        role,
       };
     } else if (isBeyondHalfCourt) {
       newEvent = {
@@ -274,6 +276,7 @@ export default function Court({
         quarter,
         assistPlayerId,
         flipCourt,
+        role,
       };
     } else {
       const { is3, distFt, inCorner3, behindArc } = computeIsThree(ftX, ftY, courtSide, flipCourt);
@@ -297,6 +300,7 @@ export default function Court({
         points,
         quarter,
         assistPlayerId,
+        role,
       };
     }
 
@@ -308,8 +312,6 @@ export default function Court({
 
   function getTargetRimByTeam(teamId, flip) {
     const isHomeTeam = teamId === homeTeamId;
-    // if not flipped: home -> left rim, away -> right rim
-    // if flipped: home -> right rim, away -> left rim
     if (!flip) {
       return isHomeTeam ? rimLeftPx : rimRightPx;
     } else {
@@ -326,7 +328,6 @@ export default function Court({
 
   return (
   <div className="court-main">
-    {/* Court container */}
     <div className="court-container" onPointerDown={handlePointerDown}>
       <img
         className="court-image"
@@ -339,7 +340,6 @@ export default function Court({
         ref={svgRef}
         viewBox={`0 0 ${COURT_WIDTH_PX} ${COURT_HEIGHT_PX}`}
       >
-        {/* Debug layer */}
         {debug && (
           <g>
             {/* 3PT arcs */}
@@ -518,7 +518,7 @@ export default function Court({
             setSelectedControl("debug");
           }}
         >
-          {debug ? "Hide Debug" : "Show Debug"}
+          {debug ? "Hide Details" : "Show Details"}
         </button>
 
         <button
@@ -528,34 +528,37 @@ export default function Court({
         >
           Undo
         </button>
+        {(role === 'homeOffense' || role === 'awayOffense' || role === "admin") && (
+          <>
+            <button
+              className="game-control-btn"
+              onClick={() => {
+                setPendingShot({ 
+                  isFreeThrow: true,
+                  flipCourt
+                });
+                setPopupStep("player");
+              }}
+            >
+              Free Throw
+            </button>
 
-        <button
-          className="game-control-btn"
-          onClick={() => {
-            setPendingShot({ 
-              isFreeThrow: true,
-              flipCourt
-            });
-            setPopupStep("player");
-          }}
-        >
-          Free Throw
-        </button>
-
-        <button
-          className="game-control-btn"
-          onClick={() => {
-            setPendingShot({
-              ftX: COURT_WIDTH_FT / 2,
-              ftY: COURT_HEIGHT_FT / 2,
-              isBeyondHalfCourt: true,
-              flipCourt,
-            });
-            setPopupStep("player");
-          }}
-        >
-          Beyond Half Court
-        </button>
+            <button
+              className="game-control-btn"
+              onClick={() => {
+                setPendingShot({
+                  ftX: COURT_WIDTH_FT / 2,
+                  ftY: COURT_HEIGHT_FT / 2,
+                  isBeyondHalfCourt: true,
+                  flipCourt,
+                });
+                setPopupStep("player");
+              }}
+            >
+              Beyond Half Court
+            </button>
+          </>
+        )}
         {/* 
         <button
           className="game-control-btn"

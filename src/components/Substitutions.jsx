@@ -14,6 +14,7 @@ export const Substitutions = ({
   onAddShot,
   quarter,
   usedTimeouts,
+  undoTimeout,
 }) => {
 
   const [selectedBenchPlayer, setSelectedBenchPlayer] = useState(null);
@@ -70,16 +71,23 @@ export const Substitutions = ({
         {teamName} Bench
       </h3>
       <div className="timeout-controls">
+        <span className="timeout-count">
+          Timeout: {usedTimeouts} / 6
+        </span>
+        <button
+          className="timeout-btn undo"
+          onClick={() => undoTimeout(teamId)}
+          disabled={usedTimeouts === 0}
+        >
+          -
+        </button>
         <button
           className="timeout-btn"
           onClick={handleTimeout}
           disabled={usedTimeouts >= 6}
         >
-          Timeout
+          +
         </button>
-        <span className="timeout-count">
-          Used: {usedTimeouts} / 6
-        </span>
       </div>
       <div className="bench-players">
         {benchPlayers.map((player) => {

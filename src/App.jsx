@@ -1,10 +1,10 @@
 // src/App.jsx
-import React, { useState, useEffect, useMemo, useRef, useCallback } from "react";
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import './App.css'
 import Header from './components/Header'
 import Auth from './components/Auth'
 import { auth, db } from './firebase'
-import { collection, doc, getDoc, getDocs, addDoc, deleteDoc, onSnapshot, query, orderBy } from "firebase/firestore";
+import { collection, doc, getDoc, getDocs, addDoc, deleteDoc, onSnapshot, query, orderBy } from 'firebase/firestore';
 import { onAuthStateChanged } from 'firebase/auth'
 import { fetchTeams } from './components/data/fetchTeams'
 import { fetchRoster } from './components/data/fetchRoster'
@@ -13,8 +13,11 @@ import { fetchTournaments } from './components/data/fetchTournaments'
 import { Substitutions } from './components/Substitutions'
 import Stats from './components/Stats'
 import Court from './components/Court'
-import Players from "./components/Players";
-import ScoreTable from "./components/ScoreTable";
+import Players from './components/Players';
+import ScoreTable from './components/ScoreTable';
+import { ROLES } from './constants/roles';
+import RoleSelect from './components/RoleSelect';
+
 
 function App() {
   const [flipCourt, setFlipCourt] = useState(true);
@@ -44,6 +47,9 @@ function App() {
   const awayTeamId = selectedGame?.awayTeamId;
   const initialActiveRef = useRef({ home: false, away: false });
   const [shots, setShots] = useState([]);
+  const [userRole, setUserRole] = useState(null);
+  const [selectedRole, setSelectedRole] = useState(null);
+
   const sortedShots = useMemo(() => {
     if (!shots || shots.length === 0) {
       return [];
@@ -58,6 +64,7 @@ function App() {
       return dateA.getTime() - dateB.getTime();
     });
   }, [shots]);
+
   const handleSub = useCallback((teamId, activePlayerIds, benchPlayerIds) => {
     const setRosterState = teamId === awayTeamId ? setActiveAwayPlayers : setActiveHomePlayers;
     const fullRoster = teamId === awayTeamId ? awayRoster : homeRoster;
@@ -66,13 +73,11 @@ function App() {
         let newRoster = [...prevRoster];
         const playersToSubIn = benchPlayerIds.map(id => fullRoster.find(p => p.id === id));
         
-        // Check if the number of players to sub in and out is the same
         if (activePlayerIds.length !== playersToSubIn.length) {
             console.error("Mismatch in number of players for substitution.");
             return prevRoster;
         }
 
-        // Perform the substitution
         activePlayerIds.forEach((outId, index) => {
             const playerIn = playersToSubIn[index];
             const playerOutIndex = newRoster.findIndex(p => p.id === outId);
@@ -94,22 +99,107 @@ function App() {
     (s) => s.type === "timeOut" && s.teamId === awayTeamId
   ).length;
 
+  const homeFouls = shots.filter(
+    (s) => s.type === "foul" && 
+    s.teamId === homeTeamId && 
+    s.quarter === currentQuarter && 
+    (s.role === 'awayDefense' || s.role === 'homeDefense')
+  ).length;
+
+  const awayFouls = shots.filter(
+    (s) => s.type === "foul" && 
+    s.teamId === awayTeamId && 
+    s.quarter === currentQuarter && 
+    (s.role === 'awayDefense' || s.role === 'homeDefense')
+  ).length;
+
+  const handleUndoTimeout = async (teamId) => {
+
+    console.log ("handleUndoTimeout,teamId", teamId)
+
+    try {
+      const shotsRef = collection(
+        db,
+        "tournaments",
+        selectedTournament.id,
+        "games",
+        selectedGameId,
+        "shots"
+      );
+
+      const q = query(shotsRef, orderBy("createdAt", "desc"));
+      const snapshot = await getDocs(q);
+
+      const teamTimeouts = snapshot.docs
+        .map((doc) => ({ id: doc.id, ...doc.data() }))
+        .filter((s) => s.type === "timeOut" && s.teamId === teamId);
+
+      if (teamTimeouts.length === 0) {
+        alert("No timeouts to undo for this team.");
+        return;
+      }
+
+      const lastTimeout = teamTimeouts[0];
+      await deleteDoc(
+        doc(
+          db,
+          "tournaments",
+          selectedTournament.id,
+          "games",
+          selectedGameId,
+          "shots",
+          lastTimeout.id
+        )
+      );
+
+      console.log(`Removed last timeout for team: ${teamId}`);
+    } catch (error) {
+      console.error("Error undoing timeout:", error);
+    }
+    };
+
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+    const unsubscribe = onAuthStateChanged(auth, async (authUser) => {
       setIsLoadingData(true);
-      setUser(currentUser);
-      if (currentUser) {
-        const idTokenResult = await currentUser.getIdTokenResult(true);
-        console.log("Custom claims from token:", idTokenResult.claims);
+      
+      if (authUser) {
+        // User is signed in. Fetch their custom role from Firestore.
+        const userDocRef = doc(db, 'users', authUser.uid);
+        const userDocSnap = await getDoc(userDocRef);
+        
+        if (userDocSnap.exists()) {
+          const userData = userDocSnap.data();
+          // Merge Firebase Auth user data with Firestore profile data
+          const userWithRole = { ...authUser, ...userData };
+          setUser(userWithRole);
+
+          if (userData.role) {
+            setSelectedRole(userData.username);
+          }
+
+          const idTokenResult = await authUser.getIdTokenResult(true);
+          console.log("Custom claims from token 1:", idTokenResult.claims);
+          console.log("ROLE:", userWithRole);
+        } else {
+          // Fallback if the user profile document is not found
+          setUser(authUser);
+          const idTokenResult = await authUser.getIdTokenResult(true);
+          console.log("Custom claims from token 2:", idTokenResult.claims);
+        }
       } else {
+        // User is signed out. Clear all user-related state.
         setUser(null);
         setTeams([]);
         setTournaments([]);
       }
+      
       setIsLoadingData(false);
     });
+
+    // Clean up the listener when the component unmounts
     return () => unsubscribe();
-  }, []);
+  }, []); // Run only once on mount to set up the listener
+
 
   useEffect(() => {
     if (!selectedGameId) return;
@@ -313,6 +403,104 @@ function App() {
     }
   }, [awayRoster]);
 
+  const renderSubstitutions = () => {
+    if (flipCourt) {
+      if (selectedRole === 'awayOffense' || selectedRole === 'awayDefense') {
+        return (
+          <Substitutions
+            teamId={awayTeamId}
+            teamName={awayTeamName}
+            fullRoster={awayRoster}
+            activePlayers={activeAwayPlayers}
+            onSub={handleSub}
+            quarter={currentQuarter}
+            onAddShot={handleAddShot}
+            pendingBenchSubs={pendingBenchSubs}
+            setPendingBenchSubs={setPendingBenchSubs}
+            usedTimeouts={awayTimeouts}
+            undoTimeout={handleUndoTimeout}
+            role={selectedRole}
+          />
+        );
+      } else if (selectedRole === 'homeOffense' || selectedRole === 'homeDefense') {
+        return (
+          <Substitutions
+            teamId={homeTeamId}
+            teamName={homeTeamName}
+            fullRoster={homeRoster}
+            activePlayers={activeHomePlayers}
+            onSub={handleSub}
+            quarter={currentQuarter}
+            onAddShot={handleAddShot}
+            pendingBenchSubs={pendingBenchSubs}
+            setPendingBenchSubs={setPendingBenchSubs}
+            usedTimeouts={homeTimeouts}
+            undoTimeout={handleUndoTimeout}
+            role={selectedRole}
+          />
+        );
+      }
+    } else { // flipCourt is false
+      if (selectedRole === 'homeOffense' || selectedRole === 'homeDefense') {
+        return (
+          <Substitutions
+            teamId={homeTeamId}
+            teamName={homeTeamName}
+            fullRoster={homeRoster}
+            activePlayers={activeHomePlayers}
+            onSub={handleSub}
+            quarter={currentQuarter}
+            onAddShot={handleAddShot}
+            pendingBenchSubs={pendingBenchSubs}
+            setPendingBenchSubs={setPendingBenchSubs}
+            usedTimeouts={homeTimeouts}
+            undoTimeout={handleUndoTimeout}
+            role={selectedRole}
+          />
+        );
+      } else if (selectedRole === 'awayOffense' || selectedRole === 'awayDefense') {
+        return (
+          <Substitutions
+            teamId={awayTeamId}
+            teamName={awayTeamName}
+            fullRoster={awayRoster}
+            activePlayers={activeAwayPlayers}
+            onSub={handleSub}
+            quarter={currentQuarter}
+            onAddShot={handleAddShot}
+            pendingBenchSubs={pendingBenchSubs}
+            setPendingBenchSubs={setPendingBenchSubs}
+            usedTimeouts={awayTimeouts}
+            undoTimeout={handleUndoTimeout}
+            role={selectedRole}
+          />
+        );
+      }
+    }
+    return null;
+  };
+
+  const renderStats = () => {
+    if (selectedRole === 'awayOffense' || selectedRole === 'awayDefense') {
+      return (
+        <Stats 
+          players={awayRoster}
+          shots={shots}
+          team={awayTeamName}
+        />
+      );
+    } else if (selectedRole === 'homeOffense' || selectedRole === 'homeDefense') {
+      return (
+        <Stats 
+          players={homeRoster}
+          shots={shots}
+          team={homeTeamName}
+        />
+      );
+    } return null;
+  };
+
+
   function formatDate(maybeTimestamp) {
     if (!maybeTimestamp) return "";
     if (typeof maybeTimestamp.toDate === "function") {
@@ -326,6 +514,10 @@ function App() {
   if (isLoadingData) {
     return <div>Loading...</div>;
   }
+
+  console.log("homeFouls",awayFouls)
+  console.log("homeFouls",homeFouls)
+
   return (
     <main className="App">
       <Header/>
@@ -347,7 +539,7 @@ function App() {
               const homeTeam = teams.find((t) => t.id === g.homeTeamId);
               const awayTeam = teams.find((t) => t.id === g.awayTeamId);
               return (
-                <option className="select-option-item"
+                <option className="sGameRoleSelectorelect-option-item"
                   key={g.id}
                   value={g.id}
                 >
@@ -357,6 +549,7 @@ function App() {
               );
             })}
           </select>
+
           {selectedGameId && (
             <>
               <div>
@@ -372,27 +565,28 @@ function App() {
                   {flipCourt ? "Flip Court" : "Flip to Default"}
                 </button>
                 <div className="quarter-control">
-                <h3>Quarter: {currentQuarter}</h3>
-                {quarters.map((q, i) => (
-                  <button
-                    key={i}
-                    className={currentQuarter === q ? "active" : ""}
-                    onClick={() => setCurrentQuarter(q)} // Set the state on click
-                  >
-                    {q}
-                  </button>
-                ))}
-              </div>
+                  <h3>Quarter: {currentQuarter}</h3>
+                  {quarters.map((q, i) => (
+                    <button
+                      key={i}
+                      className={currentQuarter === q ? "active" : ""}
+                      onClick={() => setCurrentQuarter(q)}
+                    >
+                      {q}
+                    </button>
+                  ))}
+                </div>
               </div>
               <div className="main-content-wrapper">
-              <div className="app-container">
-                    <div className="app-content"> 
-                      <div className="game-layout-container">
-                        {flipCourt ? (
-                          <>
-                            {/* Away active players lists here */}
+                <div className="app-container">
+                  <div className="app-content"> 
+                    <div className="game-layout-container">
+                      {flipCourt ? (
+                        <>
+                          {/* Conditionally render Away players based on role */}
+                          {(selectedRole === 'awayOffense' || selectedRole === 'awayDefense' || selectedRole === "admin") ? (
                             <Players
-                              players={activeAwayPlayers} // Use active players
+                              players={activeAwayPlayers}
                               setPlayers={setActiveAwayPlayers}
                               selectedPlayerId={selectedPlayerId}
                               setSelectedPlayerId={setSelectedPlayerId}
@@ -405,13 +599,17 @@ function App() {
                               pendingBenchSubs={pendingBenchSubs}
                               setPendingBenchSubs={setPendingBenchSubs}
                               quarter={currentQuarter}
+                              role={selectedRole}
+                              usedFouls={awayFouls}
                             />
-                          </>
-                        ) : (
-                          <>
-                            {/* Home active players lists here */}
+                          ) : null}
+                        </>
+                      ) : (
+                        <>
+                          {/* Conditionally render Home players based on role */}
+                          {(selectedRole === 'homeOffense' || selectedRole === 'homeDefense' || selectedRole === "admin") ? (
                             <Players
-                              players={activeHomePlayers} // Use active players
+                              players={activeHomePlayers}
                               setPlayers={setActiveHomePlayers}
                               selectedPlayerId={selectedPlayerId}
                               setSelectedPlayerId={setSelectedPlayerId}
@@ -424,29 +622,37 @@ function App() {
                               pendingBenchSubs={pendingBenchSubs}
                               setPendingBenchSubs={setPendingBenchSubs}
                               quarter={currentQuarter}
+                              role={selectedRole}
+                              usedFouls={homeFouls}
                             />
-                          </>
-                        )}
-                        <Court 
-                          onAddShot={handleAddShot} 
-                          selectedPlayerId={selectedPlayerId}
-                          selectedTeamId={selectedTeamId}
-                          onUndo={handleUndoShot} 
-                          shots={shots}
-                          quarter={currentQuarter}
-                          activeHomePlayers={activeHomePlayers}
-                          activeAwayPlayers={activeAwayPlayers}
-                          homeTeamId={homeTeamId}
-                          awayTeamId={awayTeamId}
-                          flipCourt={flipCourt}
-                          homeTeamName={homeTeamName}
-                          awayTeamName={awayTeamName}
-                         />
-                        {flipCourt ? (
-                          <>
-                            {/* Home active players lists here */}
+                          ) : null}
+                        </>
+                      )}
+
+                      {/* The Court component logic based on offense/defense */}
+                      <Court 
+                        onAddShot={handleAddShot} 
+                        selectedPlayerId={selectedPlayerId}
+                        selectedTeamId={selectedTeamId}
+                        onUndo={handleUndoShot} 
+                        shots={shots}
+                        quarter={currentQuarter}
+                        activeHomePlayers={activeHomePlayers}
+                        activeAwayPlayers={activeAwayPlayers}
+                        homeTeamId={homeTeamId}
+                        awayTeamId={awayTeamId}
+                        flipCourt={flipCourt}
+                        homeTeamName={homeTeamName}
+                        awayTeamName={awayTeamName}
+                        role={selectedRole}
+                        />
+
+                      {flipCourt ? (
+                        <>
+                          {/* Conditionally render Home players based on role */}
+                          {(selectedRole === 'homeOffense' || selectedRole === 'homeDefense' || selectedRole === "admin") ? (
                             <Players
-                              players={activeHomePlayers} // Use active players
+                              players={activeHomePlayers}
                               setPlayers={setActiveHomePlayers}
                               selectedPlayerId={selectedPlayerId}
                               setSelectedPlayerId={setSelectedPlayerId}
@@ -459,13 +665,17 @@ function App() {
                               onAddShot={handleAddShot}
                               pendingBenchSubs={pendingBenchSubs}
                               setPendingBenchSubs={setPendingBenchSubs}
+                              role={selectedRole}
+                              usedFouls={homeFouls}
                             />
-                          </>
-                        ) : (
-                          <>
-                            {/* Away active players lists here */}
+                          ) : null}
+                        </>
+                      ) : (
+                        <>
+                          {/* Conditionally render Away players based on role */}
+                          {(selectedRole === 'awayOffense' || selectedRole === 'awayDefense' || selectedRole === "admin") ? (
                             <Players
-                              players={activeAwayPlayers} // Use active players
+                              players={activeAwayPlayers}
                               setPlayers={setActiveAwayPlayers}
                               selectedPlayerId={selectedPlayerId}
                               setSelectedPlayerId={setSelectedPlayerId}
@@ -478,153 +688,173 @@ function App() {
                               onAddShot={handleAddShot}
                               pendingBenchSubs={pendingBenchSubs}
                               setPendingBenchSubs={setPendingBenchSubs}
+                              role={selectedRole}
+                              usedFouls={awayFouls}
                             />
-                          </>
-                        )}
-                      </div>
+                          ) : null}
+                        </>
+                      )}
                     </div>
                   </div>
-                  </div>
-                  <div className="sub-panels-wrapper">
-                    {flipCourt ? (
-                      <>
-                        {/* Away bench players lists here */}
-                        <Substitutions
-                          teamId={awayTeamId}
-                          teamName={awayTeamName}
-                          fullRoster={awayRoster}
-                          activePlayers={activeAwayPlayers}
-                          onSub={handleSub}
-                          quarter={currentQuarter}
-                          onAddShot={handleAddShot}
-                          pendingBenchSubs={pendingBenchSubs}
-                          setPendingBenchSubs={setPendingBenchSubs}
-                          usedTimeouts={awayTimeouts}
-                        />
-                        {/* Home bench players lists here */}
-                        <Substitutions
-                          teamId={homeTeamId}
-                          teamName={homeTeamName}
-                          fullRoster={homeRoster}
-                          activePlayers={activeHomePlayers}
-                          onSub={handleSub}
-                          quarter={currentQuarter}
-                          onAddShot={handleAddShot}
-                          pendingBenchSubs={pendingBenchSubs}
-                          setPendingBenchSubs={setPendingBenchSubs}
-                          usedTimeouts={homeTimeouts}
-                        />
-                      </>
-                    ) : (
-                      <>
-                        {/* Home bench players lists here */}
-                        <Substitutions
-                          teamId={homeTeamId}
-                          teamName={homeTeamName}
-                          fullRoster={homeRoster}
-                          activePlayers={activeHomePlayers}
-                          onSub={handleSub}
-                          quarter={currentQuarter}
-                          onAddShot={handleAddShot}
-                          pendingBenchSubs={pendingBenchSubs}
-                          setPendingBenchSubs={setPendingBenchSubs}
-                          usedTimeouts={homeTimeouts}
-                        />
-                        {/* Away bench players lists here */}
-                        <Substitutions
-                          teamId={awayTeamId}
-                          teamName={awayTeamName}
-                          fullRoster={awayRoster}
-                          activePlayers={activeAwayPlayers}
-                          onSub={handleSub}
-                          quarter={currentQuarter}
-                          onAddShot={handleAddShot}
-                          pendingBenchSubs={pendingBenchSubs}
-                          setPendingBenchSubs={setPendingBenchSubs}
-                          usedTimeouts={awayTimeouts}
-                        />
-                      </>
-                    )}
-                  </div>
-                  {/* Stats Table Away Team*/}
-                    <Stats 
-                      players={awayRoster}
-                      shots={shots}
-                      team={awayTeamName}
-                    />
-                  
-                  {/* Stats Table Away Home*/}
-                    <Stats 
-                      players={homeRoster}
-                      shots={shots}
-                      team={homeTeamName}
-                    />
-                  {/* Play-by-Play */}
-                <div style={{ marginTop: 16, fontSize: 14, color: "#ffffff" }}>
-                  <h3>Shots Log</h3>
-                    <ul style={{ listStyle: "none", padding: 0 }}>
-                       {sortedShots.map((s) => {
-                          const player =
-                            homeRoster.find((p) => p.id === s.playerId) ||
-                            awayRoster.find((p) => p.id === s.playerId);
-
-                          const homeTeam = { id: homeTeamId, name: homeTeamName };
-                          const awayTeam = { id: awayTeamId, name: awayTeamName };
-
-                          let teamName = "Unknown";
-                          if (s.teamId === homeTeam.id) teamName = homeTeam.name;
-                          if (s.teamId === awayTeam.id) teamName = awayTeam.name;
-
-                          return (
-                            <li key={s.id} className={s.made ? "bold" : ""}>
-                              {s.type === "timeOut" ? (
-                                <>
-                                  {teamName} calls a timeout.
-                                </>
-                              ) : (
-                                <>
-                              {teamName} {player?.name || "Unknown"}{" "}
-
-                              {s.type === "shot" && (
-                                  <>
-                                      {s.made ? "makes a" : "misses a"}{" "}
-                                      {`${Math.round(s.distFt)}-foot ${s.is3 ? "3-pointer" : 
-                                        "2-pointer"}`}
-                                      {s.made && s.assistPlayerId && (
-                                          <>
-                                              {" "}
-                                              (assist by{" "}
-                                              <em>
-                                                  {homeRoster.find(p => p.id === s.assistPlayerId)?.name ||
-                                                  awayRoster.find(p => p.id === s.assistPlayerId)?.name ||
-                                                  "Unknown"}
-                                              </em>
-                                              )
-                                          </>
-                                      )}
-                                  </>
-                              )}
-                              {s.type === "freeThrow" && (
-                                  <>
-                                      {s.made ? "makes a free throw for 1 point." : 
-                                      "misses a free throw for 1 point"}{" "}
-                                  </>
-                              )}
-
-                              {s.type === "offRebound" && "grabs an offensive rebound"}
-                              {s.type === "defRebound" && "grabs a defensive rebound"}
-                              {s.type === "turnOver" && "turns the ball over"}
-                              {s.type === "foul" && "commits a foul"}
-                              {s.type === "steal" && "comes up with a steal."}
-                              {s.type === "block" && "blocks the shot."}
-                              </>
-                             )} 
-                          </li>
-                          );
-                        })}
-                    </ul>
                 </div>
-                </>
+              </div>
+                <div className="sub-panels-wrapper">
+                  {renderSubstitutions()}
+                  {(selectedRole === "admin") && (
+                    <>
+                    {flipCourt ? (
+                        <>
+                          {/* Away bench players lists here */}
+                          <Substitutions
+                            teamId={awayTeamId}
+                            teamName={awayTeamName}
+                            fullRoster={awayRoster}
+                            activePlayers={activeAwayPlayers}
+                            onSub={handleSub}
+                            quarter={currentQuarter}
+                            onAddShot={handleAddShot}
+                            pendingBenchSubs={pendingBenchSubs}
+                            setPendingBenchSubs={setPendingBenchSubs}
+                            usedTimeouts={awayTimeouts}
+                            undoTimeout={handleUndoTimeout}
+                            role={selectedRole}
+                          />
+                          {/* Home bench players lists here */}
+                          <Substitutions
+                            teamId={homeTeamId}
+                            teamName={homeTeamName}
+                            fullRoster={homeRoster}
+                            activePlayers={activeHomePlayers}
+                            onSub={handleSub}
+                            quarter={currentQuarter}
+                            onAddShot={handleAddShot}
+                            pendingBenchSubs={pendingBenchSubs}
+                            setPendingBenchSubs={setPendingBenchSubs}
+                            usedTimeouts={homeTimeouts}
+                            undoTimeout={handleUndoTimeout}
+                            role={selectedRole}
+                          />
+                        </>
+                      ) : (
+                        <>
+                          {/* Home bench players lists here */}
+                          <Substitutions
+                            teamId={homeTeamId}
+                            teamName={homeTeamName}
+                            fullRoster={homeRoster}
+                            activePlayers={activeHomePlayers}
+                            onSub={handleSub}
+                            quarter={currentQuarter}
+                            onAddShot={handleAddShot}
+                            pendingBenchSubs={pendingBenchSubs}
+                            setPendingBenchSubs={setPendingBenchSubs}
+                            usedTimeouts={homeTimeouts}
+                            undoTimeout={handleUndoTimeout}
+                            role={selectedRole}
+                          />
+                          {/* Away bench players lists here */}
+                          <Substitutions
+                            teamId={awayTeamId}
+                            teamName={awayTeamName}
+                            fullRoster={awayRoster}
+                            activePlayers={activeAwayPlayers}
+                            onSub={handleSub}
+                            quarter={currentQuarter}
+                            onAddShot={handleAddShot}
+                            pendingBenchSubs={pendingBenchSubs}
+                            setPendingBenchSubs={setPendingBenchSubs}
+                            usedTimeouts={awayTimeouts}
+                            undoTimeout={handleUndoTimeout}
+                            role={selectedRole}
+                          />
+                        </>
+                      )}
+                    </>
+                  )}
+                </div>
+                {renderStats()}
+                {(selectedRole === "admin") && (
+                  <>
+                    {/* Stats Table Away Team*/}
+                      <Stats 
+                        players={awayRoster}
+                        shots={shots}
+                        team={awayTeamName}
+                      />
+                    
+                    {/* Stats Table Away Home*/}
+                      <Stats 
+                        players={homeRoster}
+                        shots={shots}
+                        team={homeTeamName}
+                      />
+                    </>
+                  )}
+                <div style={{ marginTop: 16, fontSize: 14, color: "#ffffff" }}>
+                <h3>Shots Log</h3>
+                <ul style={{ listStyle: "none", padding: 0 }}>
+                    {sortedShots.map((s) => {
+                      const player =
+                        homeRoster.find((p) => p.id === s.playerId) ||
+                        awayRoster.find((p) => p.id === s.playerId);
+
+                      const homeTeam = { id: homeTeamId, name: homeTeamName };
+                      const awayTeam = { id: awayTeamId, name: awayTeamName };
+
+                      let teamName = "Unknown";
+                      if (s.teamId === homeTeam.id) teamName = homeTeam.name;
+                      if (s.teamId === awayTeam.id) teamName = awayTeam.name;
+
+                      return (
+                        <li key={s.id} className={s.made ? "bold" : ""}>
+                          {s.type === "timeOut" ? (
+                            <>
+                              {teamName} calls a timeout.
+                            </>
+                          ) : (
+                            <>
+                          {teamName} {player?.name || "Unknown"}{" "}
+
+                          {s.type === "shot" && (
+                              <>
+                                  {s.made ? "makes a" : "misses a"}{" "}
+                                  {`${Math.round(s.distFt)}-foot ${s.is3 ? "3-pointer" : 
+                                    "2-pointer"}`}
+                                  {s.made && s.assistPlayerId && (
+                                      <>
+                                          {" "}
+                                          (assist by{" "}
+                                          <em>
+                                              {homeRoster.find(p => p.id === s.assistPlayerId)?.name ||
+                                              awayRoster.find(p => p.id === s.assistPlayerId)?.name ||
+                                              "Unknown"}
+                                          </em>
+                                          )
+                                      </>
+                                  )}
+                              </>
+                          )}
+                          {s.type === "freeThrow" && (
+                              <>
+                                  {s.made ? "makes a free throw for 1 point." : 
+                                  "misses a free throw for 1 point"}{" "}
+                              </>
+                          )}
+
+                          {s.type === "offRebound" && "grabs an offensive rebound"}
+                          {s.type === "defRebound" && "grabs a defensive rebound"}
+                          {s.type === "turnOver" && "turns the ball over"}
+                          {s.type === "foul" && "commits a foul"}
+                          {s.type === "steal" && "comes up with a steal."}
+                          {s.type === "block" && "blocks the shot."}
+                          </>
+                          )} 
+                      </li>
+                      );
+                    })}
+                </ul>
+              </div>
+            </>
           )}
 
           
