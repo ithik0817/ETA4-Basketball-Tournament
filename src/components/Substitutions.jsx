@@ -15,6 +15,7 @@ export const Substitutions = ({
   quarter,
   usedTimeouts,
   undoTimeout,
+  role,
 }) => {
 
   const [selectedBenchPlayer, setSelectedBenchPlayer] = useState(null);
@@ -53,6 +54,7 @@ export const Substitutions = ({
       teamId,
       quarter,
       createdAt: new Date(),
+      role,
       message: `Timeout called by ${teamName}`, 
     };
 

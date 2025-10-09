@@ -257,7 +257,7 @@ export default function Court({
         distFt: 15,
         quarter,
         flipCourt,
-        role,
+        role: role,
       };
     } else if (isBeyondHalfCourt) {
       newEvent = {
@@ -276,7 +276,7 @@ export default function Court({
         quarter,
         assistPlayerId,
         flipCourt,
-        role,
+        role: role,
       };
     } else {
       const { is3, distFt, inCorner3, behindArc } = computeIsThree(ftX, ftY, courtSide, flipCourt);
@@ -535,7 +535,8 @@ export default function Court({
               onClick={() => {
                 setPendingShot({ 
                   isFreeThrow: true,
-                  flipCourt
+                  flipCourt,
+                  role,
                 });
                 setPopupStep("player");
               }}
@@ -551,6 +552,7 @@ export default function Court({
                   ftY: COURT_HEIGHT_FT / 2,
                   isBeyondHalfCourt: true,
                   flipCourt,
+                  role,
                 });
                 setPopupStep("player");
               }}
@@ -605,56 +607,87 @@ export default function Court({
               {pendingShot.courtSide === "away" ? awayTeamName : homeTeamName})
             </h3>
           )}
-          {pendingShot.isFreeThrow || pendingShot.isBeyondHalfCourt ? (
-            // Free Throw active roster
+          {pendingShot.isFreeThrow || pendingShot.isBeyondHalfCourt ? (role === "admin" ? 
+          (
             <div className="free-throw-columns">
-              {/* / away team active roster */}
-              <div className="team-column">
-                <h4>{flipCourt ? awayTeamName : homeTeamName}</h4>
-                <ul>
-                  {leftColumnPlayers.map((p, index) => (
-                    <li key={p.id}>
-                      <button
-                        onClick={() => {
-                          setPendingShot({
-                            ...pendingShot,
-                            playerId: p.id,
-                            teamId: p.teamId,
-                          });
-                          setPopupStep("result");
-                        }}
-                      >
-                        ({index + 1}) - #{p.number} {p.name}
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-
-              {/* / home team active roster */}
-              <div className="team-column">
-                <h4>{flipCourt ? homeTeamName : awayTeamName}</h4>
-                <ul>
-                  {rightColumnPlayers.map((p, index) => (
-                    <li key={p.id}>
-                      <button
-                        onClick={() => {
-                          setPendingShot({
-                            ...pendingShot,
-                            playerId: p.id,
-                            teamId: p.teamId,
-                          });
-                          setPopupStep("result");
-                        }}
-                      >
-                        ({leftColumnPlayers.length + index + 1}) - #{p.number} {p.name}
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              </div>
+            {/* Left column (one team) */}
+            <div className="team-column">
+              <h4>{flipCourt ? awayTeamName : homeTeamName}</h4>
+              <ul>
+                {leftColumnPlayers.map((p, index) => (
+                  <li key={p.id}>
+                    <button
+                      onClick={() => {
+                        setPendingShot({
+                          ...pendingShot,
+                          playerId: p.id,
+                          teamId: p.teamId,
+                        });
+                        setPopupStep("result");
+                      }}
+                    >
+                      ({index + 1}) - #{p.number} {p.name}
+                    </button>
+                  </li>
+                ))}
+              </ul>
             </div>
-            ) : pendingShot.isRebound || pendingShot.isTurnover ?(
+            {/* Right column (other team) */}
+            <div className="team-column">
+              <h4>{flipCourt ? homeTeamName : awayTeamName}</h4>
+              <ul>
+                {rightColumnPlayers.map((p, index) => (
+                  <li key={p.id}>
+                    <button
+                      onClick={() => {
+                        setPendingShot({
+                          ...pendingShot,
+                          playerId: p.id,
+                          teamId: p.teamId,
+                        });
+                        setPopupStep("result");
+                      }}
+                    >
+                      ({leftColumnPlayers.length + index + 1}) - #{p.number} {p.name}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        ) : (
+          <div className="team-column">
+            <h4>
+              {role === "homeOffense"
+                ? homeTeamName
+                : role === "awayOffense"
+                ? awayTeamName
+                : ""}
+            </h4>
+            <ul>
+              {(role === "homeOffense" ? activeHomePlayers : activeAwayPlayers).map(
+                (p, index) => (
+                  <li key={p.id}>
+                    <button
+                      onClick={() => {
+                        setPendingShot({
+                          ...pendingShot,
+                          playerId: p.id,
+                          teamId:
+                            role === "homeOffense" ? homeTeamId : awayTeamId,
+                        });
+                        setPopupStep("result");
+                      }}
+                    >
+                      ({index + 1}) - #{p.number} {p.name}
+                    </button>
+                  </li>
+                )
+              )}
+            </ul>
+          </div>
+        )
+          ) : pendingShot.isRebound || pendingShot.isTurnover ?(
             // Free Throw active roster
             <div className="free-throw-columns">
               {/* / away team active roster */}
@@ -708,7 +741,6 @@ export default function Court({
                 ? activeAwayPlayers 
                 : activeHomePlayers 
               ).map((p, index, arr) => {
-                // populate popupPlayers once when list is rendered
                 if (popupPlayers.length !== arr.length) {
                   setPopupPlayers( 
                     arr.map((pp) => ({
@@ -719,7 +751,6 @@ export default function Court({
                     })) 
                   ); 
                 } 
-                
                 return ( 
                   <li key={p.id}>
                     <button 
@@ -748,7 +779,7 @@ export default function Court({
           </div>
         )}
       
-      {/* Popup: result */}
+      {/* Popup: shot result */}
       {popupStep === "result" && pendingShot && (
         <div className="popup">
           <h3>Shot Result</h3>

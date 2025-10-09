@@ -137,6 +137,7 @@ export default function Players({
                           playerId: p.id,
                           teamId: teamId,
                           quarter: quarter,
+                          role: role,
                         })
                       }
                     >
@@ -151,6 +152,7 @@ export default function Players({
                           playerId: p.id,
                           teamId: teamId,
                           quarter: quarter,
+                          role: role,
                         })
                       }
                     >
@@ -169,6 +171,7 @@ export default function Players({
                           playerId: p.id,
                           teamId: teamId,
                           quarter: quarter,
+                          role: role,
                         })
                       }
                     >
@@ -183,6 +186,7 @@ export default function Players({
                           playerId: p.id,
                           teamId: teamId,
                           quarter: quarter,
+                          role: role,
                         })
                       }
                     >
@@ -197,6 +201,7 @@ export default function Players({
                           playerId: p.id,
                           teamId: teamId,
                           quarter: quarter,
+                          role: role,
                         })
                       }
                     >

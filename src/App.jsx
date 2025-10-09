@@ -178,13 +178,13 @@ function App() {
           }
 
           const idTokenResult = await authUser.getIdTokenResult(true);
-          console.log("Custom claims from token 1:", idTokenResult.claims);
+          console.log("Custom claims from token exist:", idTokenResult.claims);
           console.log("ROLE:", userWithRole);
         } else {
           // Fallback if the user profile document is not found
           setUser(authUser);
           const idTokenResult = await authUser.getIdTokenResult(true);
-          console.log("Custom claims from token 2:", idTokenResult.claims);
+          console.log("Custom claims from token not exist:", idTokenResult.claims);
         }
       } else {
         // User is signed out. Clear all user-related state.
@@ -348,7 +348,7 @@ function App() {
         createdAt: new Date(),
       });
 
-      console.log("Added shot to Firestore with ID:", docRef.id);
+      console.log("Added shot to Firestore with ID:", docRef.id, shot.type, shot.role);
 
     } catch (error) {
       console.error("Error adding shot:", error);
@@ -358,9 +358,37 @@ function App() {
   async function handleUndoShot() {
     if (shots.length === 0) return;
 
-    const lastShot = shots[shots.length - 1];
+    console.log("INSIDE handleUndoShot");
+    console.log("shots", shots);
+    console.log("selectedRole", selectedRole);
 
-    if (selectedGameId && lastShot?.id) {
+    // ✅ Only allow certain roles
+    const allowedRoles = ["admin", "homeOffense", "awayOffense", "homeDefense", "awayDefense"];
+    if (!allowedRoles.includes(selectedRole)) {
+      alert("User role not permitted to undo shots:", selectedRole);
+    }
+
+    // ✅ ADMIN can undo the very last shot (anyone’s)
+    let shotToDelete;
+    if (selectedRole === "admin") {
+      shotToDelete = shots[shots.length - 1];
+    } else {
+      // ✅ Find the last shot created by this role
+      for (let i = shots.length - 1; i >= 0; i--) {
+        if (shots[i].role === selectedRole) {
+          shotToDelete = shots[i];
+          break;
+        }
+      }
+
+      if (!shotToDelete) {
+        alert(`No shots found for role: ${selectedRole}`);
+      }
+    }
+
+    console.log("Deleting shot:", shotToDelete);
+
+    if (selectedGameId && shotToDelete?.id) {
       try {
         const shotRef = doc(
           db,
@@ -369,12 +397,13 @@ function App() {
           "games",
           selectedGameId,
           "shots",
-          lastShot.id
+          shotToDelete.id
         );
+
         await deleteDoc(shotRef);
-        console.log("Deleted last shot from Firestore:", lastShot.id);
+        console.log("Deleted shot from Firestore:", shotToDelete.id);
       } catch (err) {
-        console.error("Error deleting last shot:", err);
+        console.error("Error deleting shot:", err);
       }
     }
   }
@@ -514,9 +543,6 @@ function App() {
   if (isLoadingData) {
     return <div>Loading...</div>;
   }
-
-  console.log("homeFouls",awayFouls)
-  console.log("homeFouls",homeFouls)
 
   return (
     <main className="App">
