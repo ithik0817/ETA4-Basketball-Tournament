@@ -1,5 +1,5 @@
 // src/components/Players.jsx
-import React, { useState, useEffect  } from "react";
+import React, { useState, useEffect } from "react";
 import { db } from "../firebase";
 import { doc, collection, addDoc, deleteDoc } from "firebase/firestore";
 
@@ -13,8 +13,8 @@ export default function Players({
   team,
   teamId,
   onSub,
-  pendingBenchSubs, // Changed from single to multiple subs
-  setPendingBenchSubs, // Changed from single to multiple subs
+  pendingBenchSubs,
+  setPendingBenchSubs,
   onAddShot,
   quarter,
   role,
@@ -22,8 +22,10 @@ export default function Players({
 }) {
   const [newPlayer, setNewPlayer] = useState("");
   const [selectedActivePlayers, setSelectedActivePlayers] = useState([]);
+
+  const [showFoulPopup, setShowFoulPopup] = useState(false);
+  const [selectedFoulPlayer, setSelectedFoulPlayer] = useState(null);
   
-  // 🔥 Auto execute substitution when counts match
   useEffect(() => {
     const benchPlayerIds = pendingBenchSubs.map((p) => p.id);
     const activePlayerIds = selectedActivePlayers.map((p) => p.id);
@@ -69,17 +71,36 @@ export default function Players({
   }
 
   const handleActivePlayerClick = (activePlayer) => {
-    // Check if the correct team's bench players are selected
+
     if (pendingBenchSubs.length === 0 || pendingBenchSubs[0].teamId !== teamId) {
       return;
     }
 
-    // Toggle the selected active player
     if (selectedActivePlayers.some((p) => p.id === activePlayer.id)) {
       setSelectedActivePlayers((prev) => prev.filter((p) => p.id !== activePlayer.id));
     } else {
       setSelectedActivePlayers((prev) => [...prev, activePlayer]);
     }
+  };
+
+  const handleFoulClick = (player) => {
+    setSelectedFoulPlayer(player);
+    setShowFoulPopup(true);
+  };
+
+  const handleFoulTypeSelect = (type) => {
+    if (onAddShot && selectedFoulPlayer) {
+      onAddShot({
+        type: "foul",
+        foulType: type,
+        playerId: selectedFoulPlayer.id,
+        teamId: teamId,
+        quarter: quarter,
+        role: role,
+      });
+    }
+    setShowFoulPopup(false);
+    setSelectedFoulPlayer(null);
   };
 
   return (
@@ -88,7 +109,7 @@ export default function Players({
       <h4 style={{ marginTop: 0, marginBottom: 0, textAlign: "center" }}>Players (On Floor)</h4>
       <span className="teamFouls-count">
         Team Fouls: {usedFouls} / 4
-        {usedFouls >= 4 && (
+        {usedFouls >= 5 && (
           <span className="bonus-indicator">
             (Bonus)
           </span>
@@ -211,17 +232,7 @@ export default function Players({
                 )}
                 <button
                   className="mini-btn pk"
-                  onClick={() =>
-                    onAddShot &&
-                    onAddShot({
-                      type: "foul",
-                      playerId: p.id,
-                      teamId: teamId,
-                      quarter: quarter,
-                      role: role,
-                    })
-                  }
-                >
+                  onClick={() => handleFoulClick(p)}>
                   PF
                 </button>
               </div>
@@ -229,6 +240,78 @@ export default function Players({
           );
         })}
       </ul>
+      {/* 🟩 Foul type popup */}
+      {showFoulPopup && (
+        <div
+          className="foul-popup-overlay"
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            width: "100vw",
+            height: "100vh",
+            background: "rgba(0,0,0,0.5)",
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            zIndex: 1000,
+          }}
+        >
+          <div
+            className="foul-popup"
+            style={{
+              background: "#191E31",
+              padding: "20px",
+              borderRadius: "12px",
+              boxShadow: "0 4px 10px rgba(0,0,0,0.3)",
+              textAlign: "center",
+              border: "4px solid #ccc",
+            }}
+          >
+            <h3>Select Foul Type</h3>
+            {/* 🧩 Filter foul types by role */}
+            {(() => {
+              let foulOptions = [];
+              if (role === "admin") {
+                foulOptions = ["personal", "offensive", "defensive", "technical"];
+              } else if (role === "homeDefense" || role === "awayDefense") {
+                foulOptions = ["personal", "defensive", "technical"];
+              } else if (role === "homeOffense" || role === "awayOffense") {
+                foulOptions = ["personal", "offensive", "technical"];
+              }
+              return (
+                <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                  {foulOptions.map((type) => (
+                    <button
+                      key={type}
+                      onClick={() => handleFoulTypeSelect(type)}
+                      style={{
+                        padding: "8px 16px",
+                        borderRadius: "8px",
+                        border: "1px solid #ccc",
+                        cursor: "pointer",
+                      }}
+                    >
+                      {type.charAt(0).toUpperCase() + type.slice(1)} Foul
+                    </button>
+                  ))}
+                </div>
+              );
+            })()}
+            <button
+              onClick={() => setShowFoulPopup(false)}
+              style={{
+                marginTop: "10px",
+                padding: "8px 16px",
+                border: "1px solid #ccc",
+                cursor: "pointer",
+              }}
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

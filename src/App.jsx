@@ -100,17 +100,19 @@ function App() {
   ).length;
 
   const homeFouls = shots.filter(
-    (s) => s.type === "foul" && 
+    (s) => (s.foulType === "personal" || 
+      s.foulType === "defensive" || 
+      s.foulType === "technical") && 
     s.teamId === homeTeamId && 
-    s.quarter === currentQuarter && 
-    (s.role === 'awayDefense' || s.role === 'homeDefense')
+    s.quarter === currentQuarter
   ).length;
 
   const awayFouls = shots.filter(
-    (s) => s.type === "foul" && 
+    (s) => (s.foulType === "personal" || 
+      s.foulType === "defensive" || 
+      s.foulType === "technical") && 
     s.teamId === awayTeamId && 
-    s.quarter === currentQuarter && 
-    (s.role === 'awayDefense' || s.role === 'homeDefense')
+    s.quarter === currentQuarter
   ).length;
 
   const handleUndoTimeout = async (teamId) => {
@@ -870,7 +872,10 @@ function App() {
                           {s.type === "offRebound" && "grabs an offensive rebound"}
                           {s.type === "defRebound" && "grabs a defensive rebound"}
                           {s.type === "turnOver" && "turns the ball over"}
-                          {s.type === "foul" && "commits a foul"}
+                          {s.foulType === "personal" && "commits a personal foul"}
+                          {s.foulType === "offensive" && "commits a offensive foul"}
+                          {s.foulType === "defensive" && "commits a defensive foul"}
+                          {s.foulType === "technical" && "commits a technical foul"}
                           {s.type === "steal" && "comes up with a steal."}
                           {s.type === "block" && "blocks the shot."}
                           </>
