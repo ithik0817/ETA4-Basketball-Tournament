@@ -131,10 +131,6 @@ header > h1 {
   font-size: smaller;
 }
 
-.quarter-control button.active {
-  background-color: 990F02;
-}
-
 .main-content-wrapper {
   display: flex;
   justify-content: center;
@@ -567,10 +563,18 @@ header > h1 {
   z-index: 999;
 }
 
-
 .popup-buttons {
   display: flex;
   justify-content: space-around;
   margin-top: 10px;
 }
 
+.quarter-control button:disabled {
+  background-color: #555;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.quarter-control button.active {
+  background-color: 990F02;
+}

@@ -1,9 +1,10 @@
 // src/components/Substitutions.jsx
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { db } from "../firebase";
 import { collection, addDoc } from "firebase/firestore";
 
 export const Substitutions = ({
+  side,
   teamName,
   fullRoster,
   activePlayers,
@@ -18,15 +19,31 @@ export const Substitutions = ({
   role,
 }) => {
   const [showConfirmPopup, setShowConfirmPopup] = useState(false);
-  const [selectedBenchPlayers, setSelectedBenchPlayers] = useState([]);
-  console.log("Substrituions.jsx")
+  const clickSideRef = useRef(null);
 
+  const isHome = side === "home";
+  const isAway = side === "away";
+
+  // ✅ Safe, global hook — not conditional
+  useEffect(() => {
+    console.log(`🟢 Mounted Substitutions for ${teamName} (${role}) (${side})`);
+    console.log("Active players:", activePlayers);
+    console.log("Full roster:", fullRoster);
+
+    return () =>
+      console.log(`🔴 Unmounted Substitutions for ${teamName} (${role}) (${side})`);
+  }, [teamName, role, side, activePlayers, fullRoster]);
+
+  // Compute bench list
   const benchPlayers = fullRoster
     .filter((player) => !activePlayers.some((p) => p.id === player.id))
     .sort((a, b) => a.number - b.number);
-  
+
   const handleBenchClick = (player) => {
- 
+    console.log("side", side);
+    clickSideRef.current = side;
+
+    // Prevent cross-team selection
     if (pendingBenchSubs.length > 0 && pendingBenchSubs[0].teamId !== teamId) {
       alert("Please unselect players from the other team first.");
       return;
@@ -41,27 +58,31 @@ export const Substitutions = ({
     }
   };
 
+  // ✅ Only open popup when this team's bench has 5 selected
   useEffect(() => {
-    if (pendingBenchSubs.length === 5) {
-      setShowConfirmPopup(true);
-    }
-  }, [pendingBenchSubs]);
+    const thisTeamSelectedCount = pendingBenchSubs.filter(
+      (p) => p.teamId === teamId
+    ).length;
+    setShowConfirmPopup(thisTeamSelectedCount === 5);
+  }, [pendingBenchSubs, teamId]);
 
   const handleConfirmSubAll = () => {
     console.log("Sub All clicked!");
+    console.log("role", role);
+    console.log("side", side);
+    console.log("clickSide", clickSideRef.current);
 
-    console.log("Active:", activePlayers);
-    console.log("Bench (selected):", pendingBenchSubs);
+    const thisTeamPending = pendingBenchSubs.filter((p) => p.teamId === teamId);
 
-    onSub(teamId, activePlayers.map(p => p.id), pendingBenchSubs.map(p => p.id));
+    onSub(teamId, activePlayers.map((p) => p.id), thisTeamPending.map((p) => p.id));
 
-    console.log("teamId", {teamId})
-    
-    setPendingBenchSubs([]);
+    // Remove only this team's pending subs
+    setPendingBenchSubs((prev) => prev.filter((p) => p.teamId !== teamId));
     setShowConfirmPopup(false);
   };
 
   const handleCancel = () => {
+    setPendingBenchSubs((prev) => prev.filter((p) => p.teamId !== teamId));
     setShowConfirmPopup(false);
   };
 
@@ -77,7 +98,7 @@ export const Substitutions = ({
       quarter,
       createdAt: new Date(),
       role,
-      message: `Timeout called by ${teamName}`, 
+      message: `Timeout called by ${teamName}`,
     };
 
     if (onAddShot) {
@@ -87,38 +108,35 @@ export const Substitutions = ({
 
   return (
     <div className="sub-container">
-      <h3 style={{ 
-        textAlign: "center", 
-        marginTop: 0, 
-        marginBottom: 0
-      }}>
+      <h3 style={{ textAlign: "center", marginTop: 0, marginBottom: 0 }}>
         {teamName} Bench
       </h3>
+
       <div className="timeout-controls">
-        <span className="timeout-count">
-          Timeout: {usedTimeouts} / 6
-        </span>
+        <span className="timeout-count">Timeout: {usedTimeouts} / 6</span>
         <button
           className="timeout-btn undo"
           onClick={() => undoTimeout(teamId)}
-          disabled={usedTimeouts === 0}
+          disabled={usedTimeouts === 0 || role === "homeOffense" || role === "awayOffense"}
         >
           -
         </button>
         <button
           className="timeout-btn"
           onClick={handleTimeout}
-          disabled={usedTimeouts >= 6}
+          disabled={usedTimeouts >= 6 || role === "homeOffense" || role === "awayOffense"}
         >
           +
         </button>
       </div>
+
       <div className="bench-players">
         {benchPlayers.map((player) => {
           const isSelected = pendingBenchSubs.some((p) => p.id === player.id);
           return (
             <li key={player.id}>
-              <button disabled={role === "homeOffense" || role === "awayOffense"}
+              <button
+                disabled={role === "homeOffense" || role === "awayOffense"}
                 className={`bench-player-btn ${isSelected ? "selected" : ""}`}
                 onClick={() => handleBenchClick(player)}
               >

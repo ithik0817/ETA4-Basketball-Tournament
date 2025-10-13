@@ -122,8 +122,6 @@ function App() {
 
   const handleUndoTimeout = async (teamId) => {
 
-    console.log ("handleUndoTimeout,teamId", teamId)
-
     try {
       const shotsRef = collection(
         db,
@@ -185,13 +183,13 @@ function App() {
           }
 
           const idTokenResult = await authUser.getIdTokenResult(true);
-          console.log("Custom claims from token exist:", idTokenResult.claims);
-          console.log("ROLE:", userWithRole);
+          //console.log("Custom claims from token exist:", idTokenResult.claims);
+          //console.log("ROLE:", userWithRole);
         } else {
           // Fallback if the user profile document is not found
           setUser(authUser);
           const idTokenResult = await authUser.getIdTokenResult(true);
-          console.log("Custom claims from token not exist:", idTokenResult.claims);
+          //console.log("Custom claims from token not exist:", idTokenResult.claims);
         }
       } else {
         // User is signed out. Clear all user-related state.
@@ -355,7 +353,7 @@ function App() {
         createdAt: new Date(),
       });
 
-      console.log("Added shot to Firestore with ID:", docRef.id, shot.type, shot.role);
+      //console.log("Added shot to Firestore with ID:", docRef.id, shot.type, shot.role);
 
     } catch (error) {
       console.error("Error adding shot:", error);
@@ -364,10 +362,6 @@ function App() {
 
   async function handleUndoShot() {
     if (shots.length === 0) return;
-
-    console.log("INSIDE handleUndoShot");
-    console.log("shots", shots);
-    console.log("selectedRole", selectedRole);
 
     // ✅ Only allow certain roles
     const allowedRoles = ["admin", "homeOffense", "awayOffense", "homeDefense", "awayDefense"];
@@ -389,11 +383,11 @@ function App() {
       }
 
       if (!shotToDelete) {
-        alert(`No shots found for role: ${selectedRole}`);
+        alert(`Role ${user.role}: has no logs to undo.`);
       }
     }
 
-    console.log("Deleting shot:", shotToDelete);
+    //console.log("Deleting shot:", shotToDelete);
 
     if (selectedGameId && shotToDelete?.id) {
       try {
@@ -408,7 +402,7 @@ function App() {
         );
 
         await deleteDoc(shotRef);
-        console.log("Deleted shot from Firestore:", shotToDelete.id);
+        //console.log("Deleted shot from Firestore:", shotToDelete.id);
       } catch (err) {
         console.error("Error deleting shot:", err);
       }
@@ -601,6 +595,7 @@ function App() {
                   <h3>Quarter: {currentQuarter}</h3>
                   {quarters.map((q, i) => (
                     <button
+                      disabled={selectedRole === "homeOffense" || selectedRole === "awayOffense"}
                       key={i}
                       className={currentQuarter === q ? "active" : ""}
                       onClick={() => setCurrentQuarter(q)}
@@ -732,78 +727,79 @@ function App() {
                 </div>
               </div>
                 <div className="sub-panels-wrapper">
-                  {renderSubstitutions()}
-                  {(selectedRole === "admin") && (
-                    <>
-                    {flipCourt ? (
-                        <>
-                          {/* Away bench players lists here */}
-                          <Substitutions
-                            teamId={awayTeamId}
-                            teamName={awayTeamName}
-                            fullRoster={awayRoster}
-                            activePlayers={activeAwayPlayers}
-                            onSub={handleSub}
-                            quarter={currentQuarter}
-                            onAddShot={handleAddShot}
-                            pendingBenchSubs={pendingBenchSubs}
-                            setPendingBenchSubs={setPendingBenchSubs}
-                            usedTimeouts={awayTimeouts}
-                            undoTimeout={handleUndoTimeout}
-                            role={selectedRole}
-                          />
-                          {/* Home bench players lists here */}
-                          <Substitutions
-                            teamId={homeTeamId}
-                            teamName={homeTeamName}
-                            fullRoster={homeRoster}
-                            activePlayers={activeHomePlayers}
-                            onSub={handleSub}
-                            quarter={currentQuarter}
-                            onAddShot={handleAddShot}
-                            pendingBenchSubs={pendingBenchSubs}
-                            setPendingBenchSubs={setPendingBenchSubs}
-                            usedTimeouts={homeTimeouts}
-                            undoTimeout={handleUndoTimeout}
-                            role={selectedRole}
-                          />
-                        </>
-                      ) : (
-                        <>
-                          {/* Home bench players lists here */}
-                          <Substitutions
-                            teamId={homeTeamId}
-                            teamName={homeTeamName}
-                            fullRoster={homeRoster}
-                            activePlayers={activeHomePlayers}
-                            onSub={handleSub}
-                            quarter={currentQuarter}
-                            onAddShot={handleAddShot}
-                            pendingBenchSubs={pendingBenchSubs}
-                            setPendingBenchSubs={setPendingBenchSubs}
-                            usedTimeouts={homeTimeouts}
-                            undoTimeout={handleUndoTimeout}
-                            role={selectedRole}
-                          />
-                          {/* Away bench players lists here */}
-                          <Substitutions
-                            teamId={awayTeamId}
-                            teamName={awayTeamName}
-                            fullRoster={awayRoster}
-                            activePlayers={activeAwayPlayers}
-                            onSub={handleSub}
-                            quarter={currentQuarter}
-                            onAddShot={handleAddShot}
-                            pendingBenchSubs={pendingBenchSubs}
-                            setPendingBenchSubs={setPendingBenchSubs}
-                            usedTimeouts={awayTimeouts}
-                            undoTimeout={handleUndoTimeout}
-                            role={selectedRole}
-                          />
-                        </>
-                      )}
-                    </>
-                  )}
+                  {selectedRole === "admin"
+                    ? (
+                      <>
+                        {flipCourt ? (
+                          <>
+                            <Substitutions
+                              key="away"
+                              side="away"
+                              teamId={awayTeamId}
+                              teamName={awayTeamName}
+                              fullRoster={awayRoster}
+                              activePlayers={activeAwayPlayers}
+                              onSub={handleSub}
+                              quarter={currentQuarter}
+                              onAddShot={handleAddShot}
+                              pendingBenchSubs={pendingBenchSubs}
+                              setPendingBenchSubs={setPendingBenchSubs}
+                              usedTimeouts={awayTimeouts}
+                              undoTimeout={handleUndoTimeout}
+                              role={selectedRole}
+                            />
+                            <Substitutions
+                              key="home"
+                              side="home"
+                              teamId={homeTeamId}
+                              teamName={homeTeamName}
+                              fullRoster={homeRoster}
+                              activePlayers={activeHomePlayers}
+                              onSub={handleSub}
+                              quarter={currentQuarter}
+                              onAddShot={handleAddShot}
+                              pendingBenchSubs={pendingBenchSubs}
+                              setPendingBenchSubs={setPendingBenchSubs}
+                              usedTimeouts={homeTimeouts}
+                              undoTimeout={handleUndoTimeout}
+                              role={selectedRole}
+                            />
+                          </>
+                        ) : (
+                          <>
+                            <Substitutions
+                              teamId={homeTeamId}
+                              teamName={homeTeamName}
+                              fullRoster={homeRoster}
+                              activePlayers={activeHomePlayers}
+                              onSub={handleSub}
+                              quarter={currentQuarter}
+                              onAddShot={handleAddShot}
+                              pendingBenchSubs={pendingBenchSubs}
+                              setPendingBenchSubs={setPendingBenchSubs}
+                              usedTimeouts={homeTimeouts}
+                              undoTimeout={handleUndoTimeout}
+                              role={selectedRole}
+                            />
+                            <Substitutions
+                              teamId={awayTeamId}
+                              teamName={awayTeamName}
+                              fullRoster={awayRoster}
+                              activePlayers={activeAwayPlayers}
+                              onSub={handleSub}
+                              quarter={currentQuarter}
+                              onAddShot={handleAddShot}
+                              pendingBenchSubs={pendingBenchSubs}
+                              setPendingBenchSubs={setPendingBenchSubs}
+                              usedTimeouts={awayTimeouts}
+                              undoTimeout={handleUndoTimeout}
+                              role={selectedRole}
+                            />
+                          </>
+                        )}
+                      </>
+                    )
+                  : renderSubstitutions()}
                 </div>
                 {renderStats()}
                 {(selectedRole === "admin") && (
@@ -824,7 +820,7 @@ function App() {
                     </>
                   )}
                 <div style={{ marginTop: 16, fontSize: 14, color: "#ffffff" }}>
-                <h3>Shots Log</h3>
+                <h3>Play-By-Play Logs</h3>
                 <ul style={{ listStyle: "none", padding: 0 }}>
                     {sortedShots.map((s) => {
                       const player =
