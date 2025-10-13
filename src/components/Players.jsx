@@ -71,6 +71,7 @@ export default function Players({
   }
 
   const handleActivePlayerClick = (activePlayer) => {
+    console.log("players click")
 
     if (pendingBenchSubs.length === 0 || pendingBenchSubs[0].teamId !== teamId) {
       return;

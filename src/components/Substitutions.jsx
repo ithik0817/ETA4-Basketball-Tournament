@@ -1,5 +1,5 @@
 // src/components/Substitutions.jsx
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { db } from "../firebase";
 import { collection, addDoc } from "firebase/firestore";
 
@@ -9,38 +9,60 @@ export const Substitutions = ({
   activePlayers,
   onSub,
   teamId,
-  setPendingBenchSubs, // Changed from single to multiple subs
-  pendingBenchSubs, // Changed from single to multiple subs
+  setPendingBenchSubs,
+  pendingBenchSubs,
   onAddShot,
   quarter,
   usedTimeouts,
   undoTimeout,
   role,
 }) => {
-
-  const [selectedBenchPlayer, setSelectedBenchPlayer] = useState(null);
+  const [showConfirmPopup, setShowConfirmPopup] = useState(false);
+  const [selectedBenchPlayers, setSelectedBenchPlayers] = useState([]);
+  console.log("Substrituions.jsx")
 
   const benchPlayers = fullRoster
     .filter((player) => !activePlayers.some((p) => p.id === player.id))
     .sort((a, b) => a.number - b.number);
   
   const handleBenchClick = (player) => {
-    // Check if a bench player from the other team is already selected
+ 
     if (pendingBenchSubs.length > 0 && pendingBenchSubs[0].teamId !== teamId) {
       alert("Please unselect players from the other team first.");
       return;
     }
 
-    // Toggle player selection
     if (pendingBenchSubs.some((p) => p.id === player.id)) {
-      // Remove player if already selected
       setPendingBenchSubs((prev) => prev.filter((p) => p.id !== player.id));
     } else if (pendingBenchSubs.length < 5) {
-      // Add player if less than 5 are already selected
       setPendingBenchSubs((prev) => [...prev, { ...player, teamId }]);
     } else {
       alert("You can select a maximum of 5 bench players.");
     }
+  };
+
+  useEffect(() => {
+    if (pendingBenchSubs.length === 5) {
+      setShowConfirmPopup(true);
+    }
+  }, [pendingBenchSubs]);
+
+  const handleConfirmSubAll = () => {
+    console.log("Sub All clicked!");
+
+    console.log("Active:", activePlayers);
+    console.log("Bench (selected):", pendingBenchSubs);
+
+    onSub(teamId, activePlayers.map(p => p.id), pendingBenchSubs.map(p => p.id));
+
+    console.log("teamId", {teamId})
+    
+    setPendingBenchSubs([]);
+    setShowConfirmPopup(false);
+  };
+
+  const handleCancel = () => {
+    setShowConfirmPopup(false);
   };
 
   const handleTimeout = () => {
@@ -96,7 +118,7 @@ export const Substitutions = ({
           const isSelected = pendingBenchSubs.some((p) => p.id === player.id);
           return (
             <li key={player.id}>
-              <button
+              <button disabled={role === "homeOffense" || role === "awayOffense"}
                 className={`bench-player-btn ${isSelected ? "selected" : ""}`}
                 onClick={() => handleBenchClick(player)}
               >
@@ -106,6 +128,26 @@ export const Substitutions = ({
           );
         })}
       </div>
+
+      {showConfirmPopup && (
+        <div className="popup-overlay">
+          <div className="popup">
+            <h4>Substitute All Active Players?</h4>
+            <p>
+              You’ve selected 5 bench players. Do you want to sub out all
+              active players?
+            </p>
+            <div className="popup-buttons">
+              <button className="confirm-btn" onClick={handleConfirmSubAll}>
+                Yes
+              </button>
+              <button className="cancel-btn" onClick={handleCancel}>
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

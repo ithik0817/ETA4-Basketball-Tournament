@@ -66,6 +66,11 @@ function App() {
   }, [shots]);
 
   const handleSub = useCallback((teamId, activePlayerIds, benchPlayerIds) => {
+
+    console.log("APP.JSX")
+    console.log("activePlayerIds", activePlayerIds)
+    console.log("benchPlayerIds", benchPlayerIds)
+
     const setRosterState = teamId === awayTeamId ? setActiveAwayPlayers : setActiveHomePlayers;
     const fullRoster = teamId === awayTeamId ? awayRoster : homeRoster;
 
@@ -89,7 +94,7 @@ function App() {
         newRoster.sort((a, b) => a.number - b.number);
         return newRoster;
     });
-  }, [awayTeamId, awayRoster, homeRoster]);
+  }, [awayTeamId, awayRoster, homeRoster,]);
 
   const homeTimeouts = shots.filter(
     (s) => s.type === "timeOut" && s.teamId === homeTeamId
