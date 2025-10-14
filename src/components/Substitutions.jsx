@@ -24,17 +24,6 @@ export const Substitutions = ({
   const isHome = side === "home";
   const isAway = side === "away";
 
-  // ✅ Safe, global hook — not conditional
-  useEffect(() => {
-    console.log(`🟢 Mounted Substitutions for ${teamName} (${role}) (${side})`);
-    console.log("Active players:", activePlayers);
-    console.log("Full roster:", fullRoster);
-
-    return () =>
-      console.log(`🔴 Unmounted Substitutions for ${teamName} (${role}) (${side})`);
-  }, [teamName, role, side, activePlayers, fullRoster]);
-
-  // Compute bench list
   const benchPlayers = fullRoster
     .filter((player) => !activePlayers.some((p) => p.id === player.id))
     .sort((a, b) => a.number - b.number);

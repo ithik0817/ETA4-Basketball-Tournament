@@ -39,7 +39,7 @@ export default function Stats({ players, shots, team }) {
         <td>{stats.fgm ?? 0}-{stats.fga ?? 0}</td>
         <td>{stats.fgPct ?? "0.0"}%</td>
 
-        <td>{stats.freeThrowA ?? 0}-{stats.freeThrowA ?? 0}</td>
+        <td>{stats.freeThrowM ?? 0}-{stats.freeThrowA ?? 0}</td>
         <td>{stats.freeThrowPct ?? "0.0"}%</td>
 
         <td>{stats.oReb ?? 0}</td>

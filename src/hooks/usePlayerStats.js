@@ -32,13 +32,10 @@ export default function usePlayerStats(players, shots) {
       const twoPct = twosA > 0 ? Number((twosM / twosA) * 100).toFixed(1) : 0;
       const threePct = threesA > 0 ? Number((threesM / threesA) * 100).toFixed(1) : 0;
       const fgPct = fga > 0 ? Number((fgm / fga) * 100).toFixed(1) : 0;
-
       const freeThrowPct = freeThrowA > 0 ? Number((freeThrowM / freeThrowA) * 100).toFixed(1) : 0;
 
       const trueShootingPct = fga + 0.44 * freeThrowA > 0 ? Number(((pts / (2 * (fga + 0.44 * freeThrowA))) * 100).toFixed(1)): 0;
-
       const effectiveFgPct = fga > 0 ? Number(((fgm + 0.5 * threesM) / fga * 100).toFixed(1)): 0;
-
       const playerUsed = fga + 0.44 * freeThrowA + turnOver;
 
 

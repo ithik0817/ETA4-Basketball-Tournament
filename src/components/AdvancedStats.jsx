@@ -23,7 +23,23 @@ export default function AdvancedStats({ players, shots, team }) {
   const reb = totals.reb;
   const freeThrowA = totals.freeThrowA;
   const fga = totals.fga;
-  const usageRate =  totals.teamTotalUsed > 0 ? Number((totals.playerUsed / totals.teamTotalUsed) * 100).toFixed(1) : 0;
+  const usageRate =  totals.teamTotalUsed > 0
+    ? Number((totals.playerUsed / totals.teamTotalUsed) * 100).toFixed(1)
+    : 0;
+
+  const possessionsUsed = totals.fga + 0.44 * totals.freeThrowA + totals.turnOver;
+    const assistRatio = possessionsUsed > 0 
+      ? Number((totals.assists / possessionsUsed) * 100).toFixed(1)
+      : 0;
+    const turnoverRatio = possessionsUsed > 0 
+      ? Number((totals.turnOver / possessionsUsed) * 100).toFixed(1)
+      : 0;
+
+  const teamPossessions = totals.fga - totals.oReb + totals.turnOver + 0.44 * totals.freeThrowA;
+
+    const offensiveEfficiency = (teamPossessions > 0)
+      ? ((totals.pts / teamPossessions) * 100).toFixed(1)
+      : 0;
 
   const renderRow = (player, isStarter = false) => {
 
@@ -32,6 +48,18 @@ export default function AdvancedStats({ players, shots, team }) {
       ? Number((stats.playerUsed / totals.teamTotalUsed) * 100).toFixed(1)
       : 0;
     const rebPct = reb > 0 ? Number((stats.reb / reb) * 100).toFixed(1): 0;
+
+    const possessionsUsed = stats.fga + 0.44 * stats.freeThrowA + stats.turnOver;
+      const assistRatio = possessionsUsed > 0 
+        ? Number((stats.assists / possessionsUsed) * 100).toFixed(1)
+        : 0;
+      const turnoverRatio = possessionsUsed > 0 
+        ? Number((stats.turnOver / possessionsUsed) * 100).toFixed(1)
+        : 0;
+
+      const offensiveEfficiency = (possessionsUsed > 0)
+      ? ((stats.pts / possessionsUsed) * 100).toFixed(1)
+      : 0;
     return (
       <tr key={player.id}>
         <td className="fixed-left-cell">
@@ -43,9 +71,13 @@ export default function AdvancedStats({ players, shots, team }) {
         <td>{stats.trueShootingPct ?? 0}%</td>
         <td>{stats.effectiveFgPct ?? 0}%</td>
         <td>{stats.assists ?? 0}/{stats.turnOver ?? 0}</td>
+        <td>{assistRatio}</td>
+        <td>{turnoverRatio}</td>
         <td>{rebPct}%</td>
         <td>{stats.freeThrowA ?? 0}/{stats.fga ?? 0}</td>
         <td>{usageRate}%</td>
+        <td>{offensiveEfficiency}</td>
+        
       </tr>
     );
   };
@@ -63,9 +95,12 @@ export default function AdvancedStats({ players, shots, team }) {
               <th>TS%</th>
               <th>eFG%</th>
               <th>AST/TO</th>
+              <th>AST Ratio</th>
+              <th>TO Ratio</th>
               <th>REB%</th>
-              <th>FT Rate</th>
-              <th>Usage Rate</th>
+              <th>FTA Rate</th>
+              <th>USG%</th>
+              <th>OER</th>
             </tr>
           </thead>
           <tbody>
@@ -82,9 +117,12 @@ export default function AdvancedStats({ players, shots, team }) {
               <td>{trueShootingPct}%</td>
               <td>{effectiveFgPct}%</td>
               <td>{assists}/{turnOver}</td>
+              <td>{assistRatio}</td>
+              <td>{turnoverRatio}</td>
               <td>{reb}</td>
               <td>{freeThrowA}/{fga}</td>
               <td>{usageRate}%</td>
+              <td>{offensiveEfficiency}</td>
             </tr>
           </tbody>
         </table>
