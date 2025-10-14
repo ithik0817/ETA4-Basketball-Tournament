@@ -1,8 +1,9 @@
 // src/components/Stats.jsx
 import React, { useMemo } from "react";
+import usePlayerStats from "../hooks/usePlayerStats";
 
 export default function Stats({ players, shots, team }) {
-  // 1. Separate players into starters and bench based on the `starter` property.
+  const { playerStats, totals } = usePlayerStats(players, shots);
   const { starters, bench } = useMemo(() => {
     const starters = players
       .filter((p) => p.starter)
@@ -12,125 +13,6 @@ export default function Stats({ players, shots, team }) {
       .sort((a, b) => a.number - b.number);
     return { starters, bench };
   }, [players]);
-
-  // 2. Build detailed stats for each player using a useMemo hook for performance.
-  const playerStats = useMemo(() => {
-    return players.map((p) => {
-      const playerShots = shots.filter((s) => s.playerId === p.id);
-
-      const twosA = playerShots.filter((s) => s.points === 2).length;
-      const twosM = playerShots.filter((s) => s.points === 2 && s.made).length;
-      const twoPct = twosA > 0 ? ((twosM / twosA) * 100).toFixed(1) : "0.0";
-
-      const threesA = playerShots.filter((s) => s.points === 3).length;
-      const threesM = playerShots.filter((s) => s.points === 3 && s.made).length;
-      const threePct = threesA > 0 ? ((threesM / threesA) * 100).toFixed(1) : "0.0";
-
-      const fgm = twosM + threesM;
-      const fga = twosA + threesA;
-      const fgPct = fga > 0 ? ((fgm / fga) * 100).toFixed(1) : "0.0";
-
-      const freeThrowA = playerShots.filter((s) => s.points === 1).length;
-      const freeThrowM = playerShots.filter((s) => s.points === 1 && s.made).length;
-      const freeThrowPct = freeThrowA > 0 ? ((freeThrowM / freeThrowA) * 100).toFixed(1) : "0.0";
-
-      const oReb = playerShots.filter((s) => s.type === "offRebound").length;
-      const dReb = playerShots.filter((s) => s.type === "defRebound").length;
-      const reb = oReb + dReb;
-      const assists = shots.filter((s) => s.assistPlayerId === p.id).length;
-      const stl = playerShots.filter((s) => s.type === "steal").length;
-      const blk = playerShots.filter((s) => s.type === "block").length;
-      const turnOver = playerShots.filter((s) => s.type === "turnOver").length;
-      const pf = playerShots.filter((s) => s.type === "foul").length;
-      
-      const pts = playerShots.reduce((sum, s) => sum + (s.made ? s.points : 0), 0);
-
-      return {
-        ...p,
-
-        twosA,
-        twosM,
-        twoPct,
-
-        threesA,
-        threesM,
-        threePct,
-
-        fgm,
-        fga,
-        fgPct,
-
-        freeThrowA,
-        freeThrowM,
-        freeThrowPct,
-
-        oReb,
-        dReb,
-        reb,
-        assists,
-        stl,
-        blk,
-        turnOver,
-        pf,
-        
-        pts,
-      };
-    });
-  }, [players, shots]);
-
-  // 3. Calculate team totals from the individual player stats.
-  const totals = useMemo(() => {
-    return playerStats.reduce(
-      (sum, p) => ({
-        twosM: sum.twosM + p.twosM,
-        twosA: sum.twosA + p.twosA,
-
-        threesM: sum.threesM + p.threesM,
-        threesA: sum.threesA + p.threesA,
-
-        fgm: sum.fgm + p.fgm,
-        fga: sum.fga + p.fga,
-
-        freeThrowM: sum.freeThrowM + p.freeThrowM,
-        freeThrowA: sum.freeThrowA + p.freeThrowA,
-
-        oReb: sum.oReb + p.oReb,
-        dReb: sum.dReb + p.dReb,
-        reb: sum.reb + p.reb,
-        assists: sum.assists + p.assists,
-        stl: sum.stl + p.stl,
-        blk: sum.blk + p.blk,
-        turnOver: sum.turnOver + p.turnOver,
-        pf: sum.pf + p.pf,
-        
-        pts: sum.pts + p.pts,
-      }),
-      { 
-        twosM: 0,
-        twosA: 0,
-
-        threesM: 0,
-        threesA: 0,
-
-        fgm: 0,
-        fga: 0,
-
-        freeThrowM: 0,
-        freeThrowA: 0,
-
-        oReb: 0,
-        dReb: 0,
-        reb: 0,
-        assists: 0,
-        stl: 0,
-        blk: 0,
-        turnOver: 0,
-        pf: 0,
-
-        pts: 0
-        }
-    );
-  }, [playerStats]);
 
   const teamTwoPct = totals.twosA > 0 ? ((totals.twosM / totals.twosA) * 100).toFixed(1) : "0.0";
   const teamThreePct = totals.threesA > 0 ? ((totals.threesM / totals.threesA) * 100).toFixed(1) : "0.0";

@@ -17,6 +17,7 @@ import Players from './components/Players';
 import ScoreTable from './components/ScoreTable';
 import { ROLES } from './constants/roles';
 import RoleSelect from './components/RoleSelect';
+import AdvancedStats from './components/AdvancedStats'
 
 
 function App() {
@@ -813,6 +814,23 @@ function App() {
                     
                     {/* Stats Table Away Home*/}
                       <Stats 
+                        players={homeRoster}
+                        shots={shots}
+                        team={homeTeamName}
+                      />
+                    </>
+                  )}
+                  {(selectedRole === "admin") && (
+                  <>
+                    {/* Stats Table Away Team*/}
+                      <AdvancedStats 
+                        players={awayRoster}
+                        shots={shots}
+                        team={awayTeamName}
+                      />
+                    
+                    {/* Stats Table Away Home*/}
+                      <AdvancedStats 
                         players={homeRoster}
                         shots={shots}
                         team={homeTeamName}
