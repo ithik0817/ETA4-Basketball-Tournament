@@ -1,7 +1,7 @@
 // src/hooks/usePlayerStats.js
 import { useMemo } from "react";
 
-export default function usePlayerStats(players, shots) {
+export default function usePlayerStats(players = [], shots = []) {
   const playerStats = useMemo(() => {
     return players.map((p) => {
       const playerShots = shots.filter((s) => s.playerId === p.id);
@@ -34,8 +34,6 @@ export default function usePlayerStats(players, shots) {
       const fgPct = fga > 0 ? Number((fgm / fga) * 100).toFixed(1) : 0;
       const freeThrowPct = freeThrowA > 0 ? Number((freeThrowM / freeThrowA) * 100).toFixed(1) : 0;
 
-      const trueShootingPct = fga + 0.44 * freeThrowA > 0 ? Number(((pts / (2 * (fga + 0.44 * freeThrowA))) * 100).toFixed(1)): 0;
-      const effectiveFgPct = fga > 0 ? Number(((fgm + 0.5 * threesM) / fga * 100).toFixed(1)): 0;
       const playerUsed = fga + 0.44 * freeThrowA + turnOver;
 
 
@@ -69,12 +67,12 @@ export default function usePlayerStats(players, shots) {
 
         pts,
         
-        trueShootingPct,
-        effectiveFgPct,
         playerUsed,
       };
     });
   }, [players, shots]);
+
+  
 
   const totals = useMemo(() => {
     const total = playerStats.reduce(

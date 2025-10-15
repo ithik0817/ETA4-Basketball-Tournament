@@ -596,7 +596,7 @@ function App() {
                   <h3>Quarter: {currentQuarter}</h3>
                   {quarters.map((q, i) => (
                     <button
-                      disabled={selectedRole === "homeOffense" || selectedRole === "awayOffense"}
+                      //disabled={selectedRole === "homeOffense" || selectedRole === "awayOffense"}
                       key={i}
                       className={currentQuarter === q ? "active" : ""}
                       onClick={() => setCurrentQuarter(q)}
@@ -825,6 +825,7 @@ function App() {
                     {/* Stats Table Away Team*/}
                       <AdvancedStats 
                         players={awayRoster}
+                        opponentPlayers={homeRoster}
                         shots={shots}
                         team={awayTeamName}
                       />
@@ -832,6 +833,7 @@ function App() {
                     {/* Stats Table Away Home*/}
                       <AdvancedStats 
                         players={homeRoster}
+                        opponentPlayers={awayRoster}
                         shots={shots}
                         team={homeTeamName}
                       />

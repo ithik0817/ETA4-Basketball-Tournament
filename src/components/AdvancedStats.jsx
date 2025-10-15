@@ -2,8 +2,11 @@
 import React, { useMemo } from "react";
 import usePlayerStats from "../hooks/usePlayerStats";
 
-export default function AdvancedStats({ players, shots, team }) {
-  // 1. Separate players into starters and bench based on the `starter` property.
+export default function AdvancedStats({ players, opponentPlayers, shots, team }) {
+  console.log("team", team);
+  console.log("players", players);
+  console.log("opponentPlayers", opponentPlayers);
+
   const { starters, bench } = useMemo(() => {
     const starters = players
       .filter((p) => p.starter)
@@ -14,39 +17,63 @@ export default function AdvancedStats({ players, shots, team }) {
     return { starters, bench };
   }, [players]);
 
-  const { playerStats, totals } = usePlayerStats(players, shots);
+  const { playerStats: teamPlayerStats, totals: teamTotals } = usePlayerStats(players, shots);
 
-  const trueShootingPct = totals.fga + 0.44 * totals.freeThrowA > 0 ? Number((totals.pts / (2 * (totals.fga + 0.44 * totals.freeThrowA))) * 100).toFixed(1): 0;
-  const effectiveFgPct = totals.fga > 0 ? Number(((totals.fgm + 0.5 * totals.threesM) / totals.fga * 100).toFixed(1)): 0;
-  const assists = totals.assists;
-  const turnOver = totals.turnOver;
-  const reb = totals.reb;
-  const freeThrowA = totals.freeThrowA;
-  const fga = totals.fga;
-  const usageRate =  totals.teamTotalUsed > 0
-    ? Number((totals.playerUsed / totals.teamTotalUsed) * 100).toFixed(1)
+  const { playerStats: opponentPlayerStats, totals: opponentTotals } = usePlayerStats(opponentPlayers || [], shots || []);
+
+  const trueShootingPct = teamTotals.fga + 0.44 * teamTotals.freeThrowA > 0 ? Number((teamTotals.pts / (2 * (teamTotals.fga + 0.44 * teamTotals.freeThrowA))) * 100).toFixed(1): 0;
+  const effectiveFgPct = teamTotals.fga > 0 ? Number(((teamTotals.fgm + 0.5 * teamTotals.threesM) / teamTotals.fga * 100).toFixed(1)): 0;
+  const assists = teamTotals.assists;
+  const turnOver = teamTotals.turnOver;
+  const reb = teamTotals.reb;
+  const freeThrowA = teamTotals.freeThrowA;
+  const fga = teamTotals.fga;
+  const usageRate =  teamTotals.teamTotalUsed > 0
+    ? Number((teamTotals.playerUsed / teamTotals.teamTotalUsed) * 100).toFixed(1)
     : 0;
 
-  const possessionsUsed = totals.fga + 0.44 * totals.freeThrowA + totals.turnOver;
+  const possessionsUsed = teamTotals.fga + 0.44 * teamTotals.freeThrowA + teamTotals.turnOver;
     const assistRatio = possessionsUsed > 0 
-      ? Number((totals.assists / possessionsUsed) * 100).toFixed(1)
+      ? Number((teamTotals.assists / possessionsUsed) * 100).toFixed(1)
       : 0;
     const turnoverRatio = possessionsUsed > 0 
-      ? Number((totals.turnOver / possessionsUsed) * 100).toFixed(1)
+      ? Number((teamTotals.turnOver / possessionsUsed) * 100).toFixed(1)
       : 0;
 
-  const teamPossessions = totals.fga - totals.oReb + totals.turnOver + 0.44 * totals.freeThrowA;
-
+  const teamPossessions = teamTotals.fga - teamTotals.oReb + teamTotals.turnOver + 0.44 * teamTotals.freeThrowA;
     const offensiveEfficiency = (teamPossessions > 0)
-      ? ((totals.pts / teamPossessions) * 100).toFixed(1)
+      ? ((teamTotals.pts / teamPossessions) * 100).toFixed(1)
       : 0;
+
+  const opponentPossessions = opponentTotals.fga - opponentTotals.oReb + opponentTotals.turnOver + 0.44 * opponentTotals.freeThrowA;
+    const defensiveEfficiency = (opponentPossessions > 0) 
+      ? ((opponentTotals.pts / opponentPossessions) * 100).toFixed(1)
+      : 0;
+
+  const netRating = (offensiveEfficiency - defensiveEfficiency).toFixed(1)
 
   const renderRow = (player, isStarter = false) => {
 
-    const stats = playerStats.find((s) => s.id === player.id) || {};
-    const usageRate = totals.teamTotalUsed > 0 
-      ? Number((stats.playerUsed / totals.teamTotalUsed) * 100).toFixed(1)
+    const stats = teamPlayerStats.find((s) => s.id === player.id) || {};
+
+    const playerDefEff = opponentPossessions > 0
+      ? (((opponentTotals.pts / opponentPossessions) * 100) *
+        (1 + (stats.dReb + stats.stl + stats.blk - stats.pf) /
+          (teamTotals.dReb + teamTotals.stl + teamTotals.blk + 1))).toFixed(1)
       : 0;
+
+    const trueShootingPct = stats.fga + 0.44 * stats.freeThrowA > 0
+      ? Number(((stats.pts / (2 * (stats.fga + 0.44 * stats.freeThrowA))) * 100).toFixed(1))
+      : 0;
+
+    const effectiveFgPct = stats.fga > 0
+      ? Number(((stats.fgm + 0.5 * stats.threesM) / stats.fga * 100).toFixed(1))
+      : 0;
+
+    const usageRate = teamTotals.teamTotalUsed > 0 
+      ? Number((stats.playerUsed / teamTotals.teamTotalUsed) * 100).toFixed(1)
+      : 0;
+
     const rebPct = reb > 0 ? Number((stats.reb / reb) * 100).toFixed(1): 0;
 
     const possessionsUsed = stats.fga + 0.44 * stats.freeThrowA + stats.turnOver;
@@ -56,10 +83,12 @@ export default function AdvancedStats({ players, shots, team }) {
       const turnoverRatio = possessionsUsed > 0 
         ? Number((stats.turnOver / possessionsUsed) * 100).toFixed(1)
         : 0;
-
       const offensiveEfficiency = (possessionsUsed > 0)
       ? ((stats.pts / possessionsUsed) * 100).toFixed(1)
       : 0;
+    
+    const netRating = (offensiveEfficiency - playerDefEff).toFixed(1)
+
     return (
       <tr key={player.id}>
         <td className="fixed-left-cell">
@@ -68,8 +97,8 @@ export default function AdvancedStats({ players, shots, team }) {
             : <>#{player.number} - {player.name}</>
           }
         </td>
-        <td>{stats.trueShootingPct ?? 0}%</td>
-        <td>{stats.effectiveFgPct ?? 0}%</td>
+        <td>{trueShootingPct ?? 0}%</td>
+        <td>{effectiveFgPct ?? 0}%</td>
         <td>{stats.assists ?? 0}/{stats.turnOver ?? 0}</td>
         <td>{assistRatio}</td>
         <td>{turnoverRatio}</td>
@@ -77,7 +106,9 @@ export default function AdvancedStats({ players, shots, team }) {
         <td>{stats.freeThrowA ?? 0}/{stats.fga ?? 0}</td>
         <td>{usageRate}%</td>
         <td>{offensiveEfficiency}</td>
-        
+        <td>{playerDefEff}</td>
+        <td>{netRating}</td>
+
       </tr>
     );
   };
@@ -100,7 +131,10 @@ export default function AdvancedStats({ players, shots, team }) {
               <th>REB%</th>
               <th>FTA Rate</th>
               <th>USG%</th>
-              <th>OER</th>
+              <th>OFFRTG</th>
+              <th>DEFRTG</th>
+              <th>NETRTG</th>
+
             </tr>
           </thead>
           <tbody>
@@ -113,7 +147,6 @@ export default function AdvancedStats({ players, shots, team }) {
             {/* Totals */}
             <tr className="team-totals-row">
               <td className="fixed-left-cell"><strong>Team Total</strong></td>
-
               <td>{trueShootingPct}%</td>
               <td>{effectiveFgPct}%</td>
               <td>{assists}/{turnOver}</td>
@@ -123,6 +156,9 @@ export default function AdvancedStats({ players, shots, team }) {
               <td>{freeThrowA}/{fga}</td>
               <td>{usageRate}%</td>
               <td>{offensiveEfficiency}</td>
+              <td>{defensiveEfficiency}</td>
+              <td>{netRating}</td>
+          
             </tr>
           </tbody>
         </table>
