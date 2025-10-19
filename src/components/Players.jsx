@@ -15,7 +15,7 @@ export default function Players({
   onSub,
   pendingBenchSubs,
   setPendingBenchSubs,
-  onAddShot,
+  onAddEvent,
   quarter,
   role,
   usedFouls,
@@ -90,8 +90,8 @@ export default function Players({
   };
 
   const handleFoulTypeSelect = (type) => {
-    if (onAddShot && selectedFoulPlayer) {
-      onAddShot({
+    if (onAddEvent && selectedFoulPlayer) {
+      onAddEvent({
         type: "foul",
         foulType: type,
         playerId: selectedFoulPlayer.id,
@@ -153,8 +153,8 @@ export default function Players({
                     <button
                       className="mini-btn oReb"
                       onClick={() =>
-                        onAddShot &&
-                        onAddShot({
+                        onAddEvent &&
+                        onAddEvent({
                           type: "offRebound",
                           playerId: p.id,
                           teamId: teamId,
@@ -168,8 +168,8 @@ export default function Players({
                     <button
                       className="mini-btn to"
                       onClick={() =>
-                        onAddShot &&
-                        onAddShot({
+                        onAddEvent &&
+                        onAddEvent({
                           type: "turnOver",
                           playerId: p.id,
                           teamId: teamId,
@@ -187,8 +187,8 @@ export default function Players({
                     <button
                       className="mini-btn dReb"
                       onClick={() =>
-                        onAddShot &&
-                        onAddShot({
+                        onAddEvent &&
+                        onAddEvent({
                           type: "defRebound",
                           playerId: p.id,
                           teamId: teamId,
@@ -202,8 +202,8 @@ export default function Players({
                     <button
                       className="mini-btn stl"
                       onClick={() =>
-                        onAddShot &&
-                        onAddShot({
+                        onAddEvent &&
+                        onAddEvent({
                           type: "steal",
                           playerId: p.id,
                           teamId: teamId,
@@ -217,8 +217,8 @@ export default function Players({
                     <button
                       className="mini-btn blk"
                       onClick={() =>
-                        onAddShot &&
-                        onAddShot({
+                        onAddEvent &&
+                        onAddEvent({
                           type: "block",
                           playerId: p.id,
                           teamId: teamId,

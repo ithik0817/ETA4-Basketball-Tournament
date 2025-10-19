@@ -12,7 +12,7 @@ export const Substitutions = ({
   teamId,
   setPendingBenchSubs,
   pendingBenchSubs,
-  onAddShot,
+  onAddEvent,
   quarter,
   usedTimeouts,
   undoTimeout,
@@ -90,8 +90,8 @@ export const Substitutions = ({
       message: `Timeout called by ${teamName}`,
     };
 
-    if (onAddShot) {
-      onAddShot(newTimeout);
+    if (onAddEvent) {
+      onAddEvent(newTimeout);
     }
   };
 

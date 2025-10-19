@@ -3,11 +3,11 @@ import React, { useRef, useState, useEffect, useCallback } from "react";
 import courtImage from "../images/FIBA_Court.svg";
 
 export default function Court({
-  onAddShot,
+  onAddEvent,
   selectedPlayerId,
   selectedTeamId,
   onUndo,
-  shots,
+  events,
   quarter,
   activeHomePlayers,
   activeAwayPlayers,
@@ -304,7 +304,7 @@ export default function Court({
       };
     }
 
-    onAddShot(newEvent);
+    onAddEvent(newEvent);
     setPendingShot(null);
     setPopupStep(null);
     console.log("newEvent", newEvent);
@@ -426,28 +426,28 @@ export default function Court({
         )}
 
         {/* Shots render marker*/}
-        {shots.map((shot) => {
+        {events.map((event) => {
           // Decide which rim to draw to using teamId and flipCourt
-          const shotFlip = shot.flipCourt ?? false;
+          const eventFlip = event.flipCourt ?? false;
           // If for some reason teamId is missing, fallback to using courtSide (legacy)
-          const rim = shot.teamId
-            ? getTargetRimByTeam(shot.teamId, shotFlip)
-            : (shot.courtSide === "away"
-                ? (shotFlip ? rimLeftPx : rimRightPx)
-                : (shotFlip ? rimRightPx : rimLeftPx)
+          const rim = event.teamId
+            ? getTargetRimByTeam(event.teamId, eventFlip)
+            : (event.courtSide === "away"
+                ? (eventFlip ? rimLeftPx : rimRightPx)
+                : (eventFlip ? rimRightPx : rimLeftPx)
               );
 
           const targetRimX = rim.x;
           const targetRimY = rim.y;
 
             return (
-              <g key={shot.id}>
-                {shot.type === "shot" && (
+              <g key={event.id}>
+                {event.type === "shot" && (
                   <>
-                    {shot.made ? (
+                    {event.made ? (
                       <circle
-                        cx={ftToPxX(shot.ftX)}
-                        cy={ftToPxY(shot.ftY)}
+                        cx={ftToPxX(event.ftX)}
+                        cy={ftToPxY(event.ftY)}
                         r="5"
                         fill="none"
                         stroke="green"
@@ -457,19 +457,19 @@ export default function Court({
                     ) : (
                       <>
                         <line
-                          x1={ftToPxX(shot.ftX) - 5}
-                          y1={ftToPxY(shot.ftY) - 5}
-                          x2={ftToPxX(shot.ftX) + 5}
-                          y2={ftToPxY(shot.ftY) + 5}
+                          x1={ftToPxX(event.ftX) - 5}
+                          y1={ftToPxY(event.ftY) - 5}
+                          x2={ftToPxX(event.ftX) + 5}
+                          y2={ftToPxY(event.ftY) + 5}
                           stroke="red"
                           strokeWidth="2"
                           opacity="0.5"
                         />
                         <line
-                          x1={ftToPxX(shot.ftX) + 5}
-                          y1={ftToPxY(shot.ftY) - 5}
-                          x2={ftToPxX(shot.ftX) - 5}
-                          y2={ftToPxY(shot.ftY) + 5}
+                          x1={ftToPxX(event.ftX) + 5}
+                          y1={ftToPxY(event.ftY) - 5}
+                          x2={ftToPxX(event.ftX) - 5}
+                          y2={ftToPxY(event.ftY) + 5}
                           stroke="red"
                           strokeWidth="2"
                           opacity="0.5"
@@ -478,22 +478,22 @@ export default function Court({
                     )}
                   </>
                 )}
-                {debug && shot.type === "shot" && (
+                {debug && event.type === "shot" && (
                   <>
                     <line
-                      x1={ftToPxX(shot.ftX)}
-                      y1={ftToPxY(shot.ftY)}
+                      x1={ftToPxX(event.ftX)}
+                      y1={ftToPxY(event.ftY)}
                       x2={targetRimX}
                       y2={targetRimY}
                       stroke="rgba(0,0,0,0.2)"
                     />
                     <text
-                      x={ftToPxX(shot.ftX) + 8}
-                      y={ftToPxY(shot.ftY) - 8}
+                      x={ftToPxX(event.ftX) + 8}
+                      y={ftToPxY(event.ftY) - 8}
                       fontSize={10}
                       fill="#222"
                     >
-                      {shot.is3 ? "3PT" : "2PT"} ({Math.round(shot.distFt)})
+                      {event.is3 ? "3PT" : "2PT"} ({Math.round(event.distFt)})
                     </text>
                   </>
                 )}
@@ -524,7 +524,7 @@ export default function Court({
         <button
           className="game-control-btn"
           onClick={() => onUndo()}
-          disabled={shots.length === 0}
+          disabled={events.length === 0}
         >
           Undo
         </button>
@@ -779,7 +779,7 @@ export default function Court({
           </div>
         )}
       
-      {/* Popup: shot result */}
+      {/* Popup: event result */}
       {popupStep === "result" && pendingShot && (
         <div className="popup">
           <h3>Shot Result</h3>

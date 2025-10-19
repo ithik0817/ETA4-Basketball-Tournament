@@ -1,33 +1,33 @@
 // src/hooks/usePlayerStats.js
 import { useMemo } from "react";
 
-export default function usePlayerStats(players = [], shots = []) {
+export default function usePlayerStats(players = [], events = []) {
   const playerStats = useMemo(() => {
     return players.map((p) => {
-      const playerShots = shots.filter((s) => s.playerId === p.id);
+      const playerEvents = events.filter((e) => e.playerId === p.id);
 
-      const twosA = playerShots.filter((s) => s.points === 2).length;
-      const twosM = playerShots.filter((s) => s.points === 2 && s.made).length;
-      const threesA = playerShots.filter((s) => s.points === 3).length;
-      const threesM = playerShots.filter((s) => s.points === 3 && s.made).length;
+      const twosA = playerEvents.filter((e) => e.points === 2).length;
+      const twosM = playerEvents.filter((e) => e.points === 2 && e.made).length;
+      const threesA = playerEvents.filter((e) => e.points === 3).length;
+      const threesM = playerEvents.filter((e) => e.points === 3 && e.made).length;
 
       const fgm = twosM + threesM;
       const fga = twosA + threesA;
 
-      const freeThrowA = playerShots.filter((s) => s.points === 1).length;
-      const freeThrowM = playerShots.filter((s) => s.points === 1 && s.made).length;
+      const freeThrowA = playerEvents.filter((e) => e.points === 1).length;
+      const freeThrowM = playerEvents.filter((e) => e.points === 1 && e.made).length;
 
-      const oReb = playerShots.filter((s) => s.type === "offRebound").length;
-      const dReb = playerShots.filter((s) => s.type === "defRebound").length;
+      const oReb = playerEvents.filter((e) => e.type === "offRebound").length;
+      const dReb = playerEvents.filter((e) => e.type === "defRebound").length;
       const reb = oReb + dReb;
 
-      const assists = shots.filter((s) => s.assistPlayerId === p.id).length;
-      const stl = playerShots.filter((s) => s.type === "steal").length;
-      const blk = playerShots.filter((s) => s.type === "block").length;
-      const turnOver = playerShots.filter((s) => s.type === "turnOver").length;
-      const pf = playerShots.filter((s) => s.type === "foul").length;
+      const assists = events.filter((e) => e.assistPlayerId === p.id).length;
+      const stl = playerEvents.filter((e) => e.type === "steal").length;
+      const blk = playerEvents.filter((e) => e.type === "block").length;
+      const turnOver = playerEvents.filter((e) => e.type === "turnOver").length;
+      const pf = playerEvents.filter((e) => e.type === "foul").length;
 
-      const pts = playerShots.reduce((sum, s) => sum + (s.made ? s.points : 0), 0);
+      const pts = playerEvents.reduce((sum, e) => sum + (e.made ? e.points : 0), 0);
 
       const twoPct = twosA > 0 ? Number((twosM / twosA) * 100).toFixed(1) : 0;
       const threePct = threesA > 0 ? Number((threesM / threesA) * 100).toFixed(1) : 0;
@@ -36,6 +36,19 @@ export default function usePlayerStats(players = [], shots = []) {
 
       const playerUsed = fga + 0.44 * freeThrowA + turnOver;
 
+      const pieNumerator = 
+        Number(pts || 0)
+        + Number(fgm || 0)
+        + Number(freeThrowM || 0)
+        - Number(fga || 0)
+        - Number(freeThrowA || 0)
+        + Number(oReb || 0)
+        + Number(dReb || 0)
+        + Number(stl || 0)
+        + Number(blk || 0)
+        + Number(assists || 0)
+        - Number(pf || 0)
+        - Number(turnOver || 0);
 
       return {
         ...p,
@@ -68,9 +81,10 @@ export default function usePlayerStats(players = [], shots = []) {
         pts,
         
         playerUsed,
+        pieNumerator,
       };
     });
-  }, [players, shots]);
+  }, [players, events]);
 
   
 
@@ -100,6 +114,8 @@ export default function usePlayerStats(players = [], shots = []) {
       
       pts: sum.pts + p.pts,
       playerUsed: sum.playerUsed + p.playerUsed,
+      pieNumerator: sum.pieNumerator + (p.pieNumerator || 0),
+      
     }), 
     {
       twosM: 0,
@@ -125,9 +141,11 @@ export default function usePlayerStats(players = [], shots = []) {
       
       pts: 0,
       playerUsed: 0,
+      pieNumerator: 0,
     });
 
     total.teamTotalUsed = total.playerUsed;
+
 
     return total;
   }, [playerStats]);

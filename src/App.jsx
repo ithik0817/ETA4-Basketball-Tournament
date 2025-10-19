@@ -4,7 +4,7 @@ import './App.css'
 import Header from './components/Header'
 import Auth from './components/Auth'
 import { auth, db } from './firebase'
-import { collection, doc, getDoc, getDocs, addDoc, deleteDoc, onSnapshot, query, orderBy } from 'firebase/firestore';
+import { collection, doc, getDoc, getDocs, addDoc, deleteDoc, onSnapshot, query, orderBy, where } from 'firebase/firestore';
 import { onAuthStateChanged } from 'firebase/auth'
 import { fetchTeams } from './components/data/fetchTeams'
 import { fetchRoster } from './components/data/fetchRoster'
@@ -47,15 +47,15 @@ function App() {
   const homeTeamId = selectedGame?.homeTeamId;
   const awayTeamId = selectedGame?.awayTeamId;
   const initialActiveRef = useRef({ home: false, away: false });
-  const [shots, setShots] = useState([]);
+  const [events, setEvents] = useState([]);
   const [userRole, setUserRole] = useState(null);
   const [selectedRole, setSelectedRole] = useState(null);
 
-  const sortedShots = useMemo(() => {
-    if (!shots || shots.length === 0) {
+  const sortedEvents = useMemo(() => {
+    if (!events || events.length === 0) {
       return [];
     }
-    return [...shots].sort((a, b) => {
+    return [...events].sort((a, b) => {
       const dateA = a.createdAt instanceof Date 
         ? a.createdAt 
         : a.createdAt?.toDate() ?? new Date(0);
@@ -64,7 +64,7 @@ function App() {
         : b.createdAt?.toDate() ?? new Date(0);
       return dateA.getTime() - dateB.getTime();
     });
-  }, [shots]);
+  }, [events]);
 
   const handleSub = useCallback((teamId, activePlayerIds, benchPlayerIds) => {
 
@@ -97,48 +97,48 @@ function App() {
     });
   }, [awayTeamId, awayRoster, homeRoster,]);
 
-  const homeTimeouts = shots.filter(
-    (s) => s.type === "timeOut" && s.teamId === homeTeamId
+  const homeTimeouts = events.filter(
+    (e) => e.type === "timeOut" && e.teamId === homeTeamId
   ).length;
 
-  const awayTimeouts = shots.filter(
-    (s) => s.type === "timeOut" && s.teamId === awayTeamId
+  const awayTimeouts = events.filter(
+    (e) => e.type === "timeOut" && e.teamId === awayTeamId
   ).length;
 
-  const homeFouls = shots.filter(
-    (s) => (s.foulType === "personal" || 
-      s.foulType === "defensive" || 
-      s.foulType === "technical") && 
-    s.teamId === homeTeamId && 
-    s.quarter === currentQuarter
+  const homeFouls = events.filter(
+    (e) => (e.foulType === "personal" || 
+      e.foulType === "defensive" || 
+      e.foulType === "technical") && 
+    e.teamId === homeTeamId && 
+    e.quarter === currentQuarter
   ).length;
 
-  const awayFouls = shots.filter(
-    (s) => (s.foulType === "personal" || 
-      s.foulType === "defensive" || 
-      s.foulType === "technical") && 
-    s.teamId === awayTeamId && 
-    s.quarter === currentQuarter
+  const awayFouls = events.filter(
+    (e) => (e.foulType === "personal" || 
+      e.foulType === "defensive" || 
+      e.foulType === "technical") && 
+    e.teamId === awayTeamId && 
+    e.quarter === currentQuarter
   ).length;
 
   const handleUndoTimeout = async (teamId) => {
 
     try {
-      const shotsRef = collection(
+      const eventsRef = collection(
         db,
         "tournaments",
         selectedTournament.id,
         "games",
         selectedGameId,
-        "shots"
+        "events"
       );
 
-      const q = query(shotsRef, orderBy("createdAt", "desc"));
+      const q = query(eventsRef, orderBy("createdAt", "desc"));
       const snapshot = await getDocs(q);
 
       const teamTimeouts = snapshot.docs
         .map((doc) => ({ id: doc.id, ...doc.data() }))
-        .filter((s) => s.type === "timeOut" && s.teamId === teamId);
+        .filter((e) => e.type === "timeOut" && e.teamId === teamId);
 
       if (teamTimeouts.length === 0) {
         alert("No timeouts to undo for this team.");
@@ -153,11 +153,11 @@ function App() {
           selectedTournament.id,
           "games",
           selectedGameId,
-          "shots",
+          "events",
           lastTimeout.id
         )
       );
-
+      await syncEventHistory(lastTimeout, "delete");
       console.log(`Removed last timeout for team: ${teamId}`);
     } catch (error) {
       console.error("Error undoing timeout:", error);
@@ -291,7 +291,7 @@ function App() {
 
   useEffect(() => {
     if (!selectedGameId) {
-      setShots([]);
+      setEvents([]);
       setHomeRoster([]);
       setAwayRoster([]);
       setHomeTeamName("");
@@ -303,20 +303,20 @@ function App() {
 
   useEffect(() => {
     if (!selectedTournament || !selectedGameId) {
-      setShots([]);
+      setEvents([]);
       return;
     }
 
-    const shotsColl = collection(
+    const eventsColl = collection(
       db,
       "tournaments",
       selectedTournament.id,
       "games",
       selectedGameId,
-      "shots"
+      "events"
     );
 
-    const q = query(shotsColl, orderBy("createdAt", "asc"));
+    const q = query(eventsColl, orderBy("createdAt", "asc"));
 
     const unsubscribe = onSnapshot(q, (snap) => {
       const docs = snap.docs.map((d) => ({ 
@@ -324,89 +324,129 @@ function App() {
         ...d.data(),
         createdAt: d.data().createdAt?.toDate()
       }));
-      setShots(docs);
+      setEvents(docs);
     }, (error) => {
-      console.error("shots onSnapshot error:", error);
+      console.error("events onSnapshot error:", error);
     });
 
     return () => unsubscribe();
   }, [selectedTournament, selectedGameId]);
 
-  async function handleAddShot(shot) {
+  async function handleAddEvent(event) {
     if (!selectedGameId) {
-      console.error("No selected game ID. Cannot add shot.");
+      console.error("No selected game ID. Cannot add event.");
       return;
     }
 
-    const shotsRef = collection(
+    const eventsRef = collection(
       db,
       "tournaments",
       selectedTournament.id,
       "games",
       selectedGameId,
-      "shots"
+      "events"
     );
-    try {
-      const { id, ...shotDataToStore } = shot;
 
-      const docRef = await addDoc(shotsRef, {
-        ...shotDataToStore,
+    try {
+      const { id, ...eventDataToStore } = event;
+
+      const docRef = await addDoc(eventsRef, {
+        ...eventDataToStore,
         createdAt: new Date(),
       });
 
-      //console.log("Added shot to Firestore with ID:", docRef.id, shot.type, shot.role);
+      const storedEvent = { id: docRef.id, ...eventDataToStore };
+      await syncEventHistory(storedEvent, "add");
 
     } catch (error) {
-      console.error("Error adding shot:", error);
+      console.error("Error adding event:", error);
     }
   }
 
-  async function handleUndoShot() {
-    if (shots.length === 0) return;
+  async function handleUndoEvent() {
+    if (events.length === 0) return;
 
-    // ✅ Only allow certain roles
+    let eventToDelete;
     const allowedRoles = ["admin", "homeOffense", "awayOffense", "homeDefense", "awayDefense"];
+
     if (!allowedRoles.includes(selectedRole)) {
-      alert("User role not permitted to undo shots:", selectedRole);
+      alert("User role not permitted to undo events.");
+      return;
     }
 
-    // ✅ ADMIN can undo the very last shot (anyone’s)
-    let shotToDelete;
     if (selectedRole === "admin") {
-      shotToDelete = shots[shots.length - 1];
+      eventToDelete = events[events.length - 1];
     } else {
-      // ✅ Find the last shot created by this role
-      for (let i = shots.length - 1; i >= 0; i--) {
-        if (shots[i].role === selectedRole) {
-          shotToDelete = shots[i];
+      for (let i = events.length - 1; i >= 0; i--) {
+        if (events[i].role === selectedRole) {
+          eventToDelete = events[i];
           break;
         }
       }
 
-      if (!shotToDelete) {
+      if (!eventToDelete) {
         alert(`Role ${user.role}: has no logs to undo.`);
       }
     }
 
-    //console.log("Deleting shot:", shotToDelete);
-
-    if (selectedGameId && shotToDelete?.id) {
+    if (selectedGameId && eventToDelete?.id) {
       try {
-        const shotRef = doc(
+        const eventRef = doc(
           db,
           "tournaments",
           selectedTournament.id,
           "games",
           selectedGameId,
-          "shots",
-          shotToDelete.id
+          "events",
+          eventToDelete.id
         );
 
-        await deleteDoc(shotRef);
-        //console.log("Deleted shot from Firestore:", shotToDelete.id);
+        await deleteDoc(eventRef);
+        await syncEventHistory(eventToDelete, "delete");
+        //console.log("Deleted event from Firestore:", eventToDelete.id);
       } catch (err) {
-        console.error("Error deleting shot:", err);
+        console.error("Error deleting event:", err);
       }
+    }
+  }
+
+  async function syncEventHistory(event, actionType) {
+    try {
+      const { teamId, playerId, id: eventId } = event; // Use 'id' for the original event ID
+
+      const syncAction = async (historyRef) => {
+        if (actionType === "add") {
+          // Add a new document to the history
+          await addDoc(historyRef, {
+            ...event,
+            createdAt: new Date(),
+            source: "events"
+          });
+        } else if (actionType === "delete") {
+          // Find and delete the matching history document
+          const q = query(historyRef, where("id", "==", eventId)); // Query for the original event ID
+          const querySnapshot = await getDocs(q);
+
+          querySnapshot.forEach(async (docToDelete) => {
+            await deleteDoc(docToDelete.ref);
+          });
+        }
+      };
+
+      // TEAM HISTORY
+      if (teamId) {
+        const teamHistoryRef = collection(db, "teams", teamId, "history");
+        await syncAction(teamHistoryRef);
+      }
+
+      // PLAYER HISTORY
+      if (playerId) {
+        const playerHistoryRef = collection(db, "players", playerId, "history");
+        await syncAction(playerHistoryRef);
+      }
+
+    } catch (err) {
+      console.error("Error syncing event history:", err);
     }
   }
 
@@ -445,7 +485,7 @@ function App() {
             activePlayers={activeAwayPlayers}
             onSub={handleSub}
             quarter={currentQuarter}
-            onAddShot={handleAddShot}
+            onAddEvent={handleAddEvent}
             pendingBenchSubs={pendingBenchSubs}
             setPendingBenchSubs={setPendingBenchSubs}
             usedTimeouts={awayTimeouts}
@@ -462,7 +502,7 @@ function App() {
             activePlayers={activeHomePlayers}
             onSub={handleSub}
             quarter={currentQuarter}
-            onAddShot={handleAddShot}
+            onAddEvent={handleAddEvent}
             pendingBenchSubs={pendingBenchSubs}
             setPendingBenchSubs={setPendingBenchSubs}
             usedTimeouts={homeTimeouts}
@@ -481,7 +521,7 @@ function App() {
             activePlayers={activeHomePlayers}
             onSub={handleSub}
             quarter={currentQuarter}
-            onAddShot={handleAddShot}
+            onAddEvent={handleAddEvent}
             pendingBenchSubs={pendingBenchSubs}
             setPendingBenchSubs={setPendingBenchSubs}
             usedTimeouts={homeTimeouts}
@@ -498,7 +538,7 @@ function App() {
             activePlayers={activeAwayPlayers}
             onSub={handleSub}
             quarter={currentQuarter}
-            onAddShot={handleAddShot}
+            onAddEvent={handleAddEvent}
             pendingBenchSubs={pendingBenchSubs}
             setPendingBenchSubs={setPendingBenchSubs}
             usedTimeouts={awayTimeouts}
@@ -514,19 +554,35 @@ function App() {
   const renderStats = () => {
     if (selectedRole === 'awayOffense' || selectedRole === 'awayDefense') {
       return (
-        <Stats 
-          players={awayRoster}
-          shots={shots}
-          team={awayTeamName}
-        />
+        <>
+          <Stats 
+            players={awayRoster}
+            events={events}
+            team={awayTeamName}
+          />
+          <AdvancedStats 
+            players={awayRoster}
+            opponentPlayers={homeRoster}
+            events={events}
+            team={awayTeamName}
+          />
+        </>      
       );
     } else if (selectedRole === 'homeOffense' || selectedRole === 'homeDefense') {
       return (
-        <Stats 
-          players={homeRoster}
-          shots={shots}
-          team={homeTeamName}
-        />
+        <>
+          <Stats 
+            players={homeRoster}
+            events={events}
+            team={homeTeamName}
+          />
+          <AdvancedStats 
+            players={homeRoster}
+            opponentPlayers={awayRoster}
+            events={events}
+            team={homeTeamName}
+          />
+        </>        
       );
     } return null;
   };
@@ -587,7 +643,7 @@ function App() {
                   awayTeamName={awayTeamName}
                   homeTeamName={homeTeamName} 
                   quarter={currentQuarter}
-                  shots={shots}
+                  events={events}
                 />
                 <button className="flipCourt-control" onClick={() => setFlipCourt(prev => !prev)}>
                   {flipCourt ? "Flip Court" : "Flip to Default"}
@@ -624,7 +680,7 @@ function App() {
                               team={awayTeamName}
                               teamId={awayTeamId}
                               onSub={handleSub}
-                              onAddShot={handleAddShot}
+                              onAddEvent={handleAddEvent}
                               pendingBenchSubs={pendingBenchSubs}
                               setPendingBenchSubs={setPendingBenchSubs}
                               quarter={currentQuarter}
@@ -647,7 +703,7 @@ function App() {
                               team={homeTeamName}
                               teamId={homeTeamId}
                               onSub={handleSub}
-                              onAddShot={handleAddShot}
+                              onAddEvent={handleAddEvent}
                               pendingBenchSubs={pendingBenchSubs}
                               setPendingBenchSubs={setPendingBenchSubs}
                               quarter={currentQuarter}
@@ -660,11 +716,11 @@ function App() {
 
                       {/* The Court component logic based on offense/defense */}
                       <Court 
-                        onAddShot={handleAddShot} 
+                        onAddEvent={handleAddEvent} 
                         selectedPlayerId={selectedPlayerId}
                         selectedTeamId={selectedTeamId}
-                        onUndo={handleUndoShot} 
-                        shots={shots}
+                        onUndo={handleUndoEvent} 
+                        events={events}
                         quarter={currentQuarter}
                         activeHomePlayers={activeHomePlayers}
                         activeAwayPlayers={activeAwayPlayers}
@@ -691,7 +747,7 @@ function App() {
                               teamId={homeTeamId}
                               onSub={handleSub}
                               quarter={currentQuarter}
-                              onAddShot={handleAddShot}
+                              onAddEvent={handleAddEvent}
                               pendingBenchSubs={pendingBenchSubs}
                               setPendingBenchSubs={setPendingBenchSubs}
                               role={selectedRole}
@@ -714,7 +770,7 @@ function App() {
                               teamId={awayTeamId}
                               onSub={handleSub}
                               quarter={currentQuarter}
-                              onAddShot={handleAddShot}
+                              onAddEvent={handleAddEvent}
                               pendingBenchSubs={pendingBenchSubs}
                               setPendingBenchSubs={setPendingBenchSubs}
                               role={selectedRole}
@@ -742,7 +798,7 @@ function App() {
                               activePlayers={activeAwayPlayers}
                               onSub={handleSub}
                               quarter={currentQuarter}
-                              onAddShot={handleAddShot}
+                              onAddEvent={handleAddEvent}
                               pendingBenchSubs={pendingBenchSubs}
                               setPendingBenchSubs={setPendingBenchSubs}
                               usedTimeouts={awayTimeouts}
@@ -758,7 +814,7 @@ function App() {
                               activePlayers={activeHomePlayers}
                               onSub={handleSub}
                               quarter={currentQuarter}
-                              onAddShot={handleAddShot}
+                              onAddEvent={handleAddEvent}
                               pendingBenchSubs={pendingBenchSubs}
                               setPendingBenchSubs={setPendingBenchSubs}
                               usedTimeouts={homeTimeouts}
@@ -775,7 +831,7 @@ function App() {
                               activePlayers={activeHomePlayers}
                               onSub={handleSub}
                               quarter={currentQuarter}
-                              onAddShot={handleAddShot}
+                              onAddEvent={handleAddEvent}
                               pendingBenchSubs={pendingBenchSubs}
                               setPendingBenchSubs={setPendingBenchSubs}
                               usedTimeouts={homeTimeouts}
@@ -789,7 +845,7 @@ function App() {
                               activePlayers={activeAwayPlayers}
                               onSub={handleSub}
                               quarter={currentQuarter}
-                              onAddShot={handleAddShot}
+                              onAddEvent={handleAddEvent}
                               pendingBenchSubs={pendingBenchSubs}
                               setPendingBenchSubs={setPendingBenchSubs}
                               usedTimeouts={awayTimeouts}
@@ -808,14 +864,14 @@ function App() {
                     {/* Stats Table Away Team*/}
                       <Stats 
                         players={awayRoster}
-                        shots={shots}
+                        events={events}
                         team={awayTeamName}
                       />
                     
                     {/* Stats Table Away Home*/}
                       <Stats 
                         players={homeRoster}
-                        shots={shots}
+                        events={events}
                         team={homeTeamName}
                       />
                     </>
@@ -826,7 +882,7 @@ function App() {
                       <AdvancedStats 
                         players={awayRoster}
                         opponentPlayers={homeRoster}
-                        shots={shots}
+                        events={events}
                         team={awayTeamName}
                       />
                     
@@ -834,7 +890,7 @@ function App() {
                       <AdvancedStats 
                         players={homeRoster}
                         opponentPlayers={awayRoster}
-                        shots={shots}
+                        events={events}
                         team={homeTeamName}
                       />
                     </>
@@ -842,21 +898,21 @@ function App() {
                 <div style={{ marginTop: 16, fontSize: 14, color: "#ffffff" }}>
                 <h3>Play-By-Play Logs</h3>
                 <ul style={{ listStyle: "none", padding: 0 }}>
-                    {sortedShots.map((s) => {
+                    {sortedEvents.map((e) => {
                       const player =
-                        homeRoster.find((p) => p.id === s.playerId) ||
-                        awayRoster.find((p) => p.id === s.playerId);
+                        homeRoster.find((p) => p.id === e.playerId) ||
+                        awayRoster.find((p) => p.id === e.playerId);
 
                       const homeTeam = { id: homeTeamId, name: homeTeamName };
                       const awayTeam = { id: awayTeamId, name: awayTeamName };
 
                       let teamName = "Unknown";
-                      if (s.teamId === homeTeam.id) teamName = homeTeam.name;
-                      if (s.teamId === awayTeam.id) teamName = awayTeam.name;
+                      if (e.teamId === homeTeam.id) teamName = homeTeam.name;
+                      if (e.teamId === awayTeam.id) teamName = awayTeam.name;
 
                       return (
-                        <li key={s.id} className={s.made ? "bold" : ""}>
-                          {s.type === "timeOut" ? (
+                        <li key={e.id} className={e.made ? "bold" : ""}>
+                          {e.type === "timeOut" ? (
                             <>
                               {teamName} calls a timeout.
                             </>
@@ -864,18 +920,18 @@ function App() {
                             <>
                           {teamName} {player?.name || "Unknown"}{" "}
 
-                          {s.type === "shot" && (
+                          {e.type === "shot" && (
                               <>
-                                  {s.made ? "makes a" : "misses a"}{" "}
-                                  {`${Math.round(s.distFt)}-foot ${s.is3 ? "3-pointer" : 
+                                  {e.made ? "makes a" : "misses a"}{" "}
+                                  {`${Math.round(e.distFt)}-foot ${e.is3 ? "3-pointer" : 
                                     "2-pointer"}`}
-                                  {s.made && s.assistPlayerId && (
+                                  {e.made && e.assistPlayerId && (
                                       <>
                                           {" "}
                                           (assist by{" "}
                                           <em>
-                                              {homeRoster.find(p => p.id === s.assistPlayerId)?.name ||
-                                              awayRoster.find(p => p.id === s.assistPlayerId)?.name ||
+                                              {homeRoster.find(p => p.id === e.assistPlayerId)?.name ||
+                                              awayRoster.find(p => p.id === e.assistPlayerId)?.name ||
                                               "Unknown"}
                                           </em>
                                           )
@@ -883,22 +939,22 @@ function App() {
                                   )}
                               </>
                           )}
-                          {s.type === "freeThrow" && (
+                          {e.type === "freeThrow" && (
                               <>
-                                  {s.made ? "makes a free throw for 1 point." : 
+                                  {e.made ? "makes a free throw for 1 point." : 
                                   "misses a free throw for 1 point"}{" "}
                               </>
                           )}
 
-                          {s.type === "offRebound" && "grabs an offensive rebound"}
-                          {s.type === "defRebound" && "grabs a defensive rebound"}
-                          {s.type === "turnOver" && "turns the ball over"}
-                          {s.foulType === "personal" && "commits a personal foul"}
-                          {s.foulType === "offensive" && "commits a offensive foul"}
-                          {s.foulType === "defensive" && "commits a defensive foul"}
-                          {s.foulType === "technical" && "commits a technical foul"}
-                          {s.type === "steal" && "comes up with a steal."}
-                          {s.type === "block" && "blocks the shot."}
+                          {e.type === "offRebound" && "grabs an offensive rebound"}
+                          {e.type === "defRebound" && "grabs a defensive rebound"}
+                          {e.type === "turnOver" && "turns the ball over"}
+                          {e.foulType === "personal" && "commits a personal foul"}
+                          {e.foulType === "offensive" && "commits a offensive foul"}
+                          {e.foulType === "defensive" && "commits a defensive foul"}
+                          {e.foulType === "technical" && "commits a technical foul"}
+                          {e.type === "steal" && "comes up with a steal."}
+                          {e.type === "block" && "blocks the shot."}
                           </>
                           )} 
                       </li>

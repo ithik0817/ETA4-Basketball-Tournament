@@ -8,7 +8,7 @@ export default function ScoreTable({
   homeTeamId, 
   awayTeamName, 
   homeTeamName, 
-  shots 
+  events 
 }) {
   const { 
     homeScoresByQuarter,
@@ -30,16 +30,16 @@ export default function ScoreTable({
     homeScoresByQuarter["OT"] = 0;
     awayScoresByQuarter["OT"] = 0;
 
-    shots.forEach(shot => {
-      if (shot.made) {
-        if (shot.teamId === homeTeamId) {
-          homeScoresByQuarter[shot.quarter] =
-            (homeScoresByQuarter[shot.quarter] || 0) + shot.points;
-          totalHomeScore += shot.points;
-        } else if (shot.teamId === awayTeamId) {
-          awayScoresByQuarter[shot.quarter] =
-            (awayScoresByQuarter[shot.quarter] || 0) + shot.points;
-          totalAwayScore += shot.points;
+    events.forEach(event => {
+      if (event.made) {
+        if (event.teamId === homeTeamId) {
+          homeScoresByQuarter[event.quarter] =
+            (homeScoresByQuarter[event.quarter] || 0) + event.points;
+          totalHomeScore += event.points;
+        } else if (event.teamId === awayTeamId) {
+          awayScoresByQuarter[event.quarter] =
+            (awayScoresByQuarter[event.quarter] || 0) + event.points;
+          totalAwayScore += event.points;
         }
       }
     });
@@ -54,7 +54,7 @@ export default function ScoreTable({
       totalAwayScore,
       hasOT
     };
-  }, [shots, homeTeamId, awayTeamId]);
+  }, [events, homeTeamId, awayTeamId]);
 
   const quarterLabels = hasOT ? [1, 2, 3, 4, "OT"] : [1, 2, 3, 4];
 

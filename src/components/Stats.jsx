@@ -2,8 +2,8 @@
 import React, { useMemo } from "react";
 import usePlayerStats from "../hooks/usePlayerStats";
 
-export default function Stats({ players, shots, team }) {
-  const { playerStats, totals } = usePlayerStats(players, shots);
+export default function Stats({ players, events, team }) {
+  const { playerStats, totals } = usePlayerStats(players, events);
   const { starters, bench } = useMemo(() => {
     const starters = players
       .filter((p) => p.starter)
