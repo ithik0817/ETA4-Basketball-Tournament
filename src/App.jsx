@@ -50,6 +50,14 @@ function App() {
   const [events, setEvents] = useState([]);
   const [userRole, setUserRole] = useState(null);
   const [selectedRole, setSelectedRole] = useState(null);
+  const [courtFilter, setCourtFilter] = useState({
+    team: "all",
+    player: "all",
+    quarter: "all"
+  });
+
+  console.log("setCourtFilter", setCourtFilter)
+  console.log("courtFilter", courtFilter)
 
   const sortedEvents = useMemo(() => {
     if (!events || events.length === 0) {
@@ -105,12 +113,14 @@ function App() {
     (e) => e.type === "timeOut" && e.teamId === awayTeamId
   ).length;
 
+  const isOvertime = currentQuarter === "OT";
+
   const homeFouls = events.filter(
     (e) => (e.foulType === "personal" || 
       e.foulType === "defensive" || 
       e.foulType === "technical") && 
     e.teamId === homeTeamId && 
-    e.quarter === currentQuarter
+    (isOvertime ? e.quarter === 4 || e.quarter === "OT" : e.quarter === currentQuarter)
   ).length;
 
   const awayFouls = events.filter(
@@ -118,7 +128,7 @@ function App() {
       e.foulType === "defensive" || 
       e.foulType === "technical") && 
     e.teamId === awayTeamId && 
-    e.quarter === currentQuarter
+    (isOvertime ? e.quarter === 4 || e.quarter === "OT" : e.quarter === currentQuarter)
   ).length;
 
   const handleUndoTimeout = async (teamId) => {
@@ -187,10 +197,8 @@ function App() {
           //console.log("Custom claims from token exist:", idTokenResult.claims);
           //console.log("ROLE:", userWithRole);
         } else {
-          // Fallback if the user profile document is not found
           setUser(authUser);
           const idTokenResult = await authUser.getIdTokenResult(true);
-          //console.log("Custom claims from token not exist:", idTokenResult.claims);
         }
       } else {
         // User is signed out. Clear all user-related state.
@@ -587,7 +595,6 @@ function App() {
     } return null;
   };
 
-
   function formatDate(maybeTimestamp) {
     if (!maybeTimestamp) return "";
     if (typeof maybeTimestamp.toDate === "function") {
@@ -724,14 +731,16 @@ function App() {
                         quarter={currentQuarter}
                         activeHomePlayers={activeHomePlayers}
                         activeAwayPlayers={activeAwayPlayers}
+                        homeRoster={homeRoster}
+                        awayRoster={awayRoster}
                         homeTeamId={homeTeamId}
                         awayTeamId={awayTeamId}
                         flipCourt={flipCourt}
                         homeTeamName={homeTeamName}
                         awayTeamName={awayTeamName}
                         role={selectedRole}
+                        onFilterChange={(filters) => setCourtFilter(filters)}
                         />
-
                       {flipCourt ? (
                         <>
                           {/* Conditionally render Home players based on role */}

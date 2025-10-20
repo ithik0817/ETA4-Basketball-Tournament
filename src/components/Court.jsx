@@ -11,12 +11,15 @@ export default function Court({
   quarter,
   activeHomePlayers,
   activeAwayPlayers,
+  homeRoster,
+  awayRoster,
   homeTeamId,
   awayTeamId,
   flipCourt,
   homeTeamName,
   awayTeamName,
   role,
+  onFilterChange,
 }) {
 
   const svgRef = useRef(null);
@@ -24,6 +27,10 @@ export default function Court({
   const [pendingShot, setPendingShot] = useState(null);
   const [popupStep, setPopupStep] = useState(null);
   const [selectedControl, setSelectedControl] = useState(null);
+  const [popupPlayers, setPopupPlayers] = useState([]);
+  const [filterTeam, setFilterTeam] = useState("all");
+  const [filterPlayer, setFilterPlayer] = useState("all");
+  const [filterQuarter, setFilterQuarter] = useState("all");
 
   const COURT_WIDTH_FT = 91.9;
   const COURT_HEIGHT_FT = 49.2;
@@ -48,7 +55,7 @@ export default function Court({
   const BottomYPx = ftToPxY(BottomY);
   const RightXPx = ftToPxX(RightX);
 
-  const [popupPlayers, setPopupPlayers] = useState([]);
+
 
   const handleCancel = useCallback(() => {
     setPendingShot(null);
@@ -319,15 +326,82 @@ export default function Court({
     }
   }
 
-
   const rightColumnPlayers = (flipCourt ? activeHomePlayers : activeAwayPlayers)
     .map(p => ({ ...p, teamId: flipCourt ? homeTeamId : awayTeamId }));
 
   const leftColumnPlayers = (flipCourt ? activeAwayPlayers : activeHomePlayers)
     .map(p => ({ ...p, teamId: flipCourt ? awayTeamId : homeTeamId }));
 
+  const filteredEvents = events.filter((e) => {
+    const matchTeam = filterTeam === "all" || e.teamId === filterTeam;
+    const matchPlayer = filterPlayer === "all" || e.playerId === filterPlayer;
+    const matchQuarter = filterQuarter === "all" || e.quarter?.toString() === filterQuarter;
+    return matchTeam && matchPlayer && matchQuarter;
+  });
+
+  useEffect(() => {
+    if (onFilterChange) {
+      onFilterChange({ team: filterTeam, player: filterPlayer, quarter: filterQuarter });
+    }
+  }, [filterTeam, filterPlayer, filterQuarter]);
+
   return (
   <div className="court-main">
+    
+    <div className="filter-bar">
+      <label>
+        Team:
+        <select
+          value={filterTeam}
+          onChange={(e) => {
+            setFilterTeam(e.target.value);
+            setFilterPlayer("all"); // reset player when switching team
+          }}
+        >
+          <option value="all">All Teams</option>
+          <option value={homeTeamId}>{homeTeamName}</option>
+          <option value={awayTeamId}>{awayTeamName}</option>
+        </select>
+      </label>
+
+      <label>
+        Player:
+        <select
+          value={filterPlayer}
+          onChange={(e) => setFilterPlayer(e.target.value)}
+        >
+          <option value="all">All Players</option>
+          {filterTeam === homeTeamId &&
+            homeRoster.map((p) => (
+              <option key={p.id} value={p.id}>
+                #{p.number} {p.name}
+              </option>
+            ))}
+          {filterTeam === awayTeamId &&
+            awayRoster.map((p) => (
+              <option key={p.id} value={p.id}>
+                #{p.number} {p.name}
+              </option>
+            ))}
+        </select>
+      </label>
+
+      <label>
+        Quarter:
+        <select
+          value={filterQuarter}
+          onChange={(e) => setFilterQuarter(e.target.value)}
+        >
+          <option value="all">All Quarters</option>
+          <option value="1">Q1</option>
+          <option value="2">Q2</option>
+          <option value="3">Q3</option>
+          <option value="4">Q4</option>
+          <option value="OT">OT</option>
+        </select>
+      </label>
+    </div>
+
     <div className="court-container" onPointerDown={handlePointerDown}>
       <img
         className="court-image"
@@ -426,7 +500,9 @@ export default function Court({
         )}
 
         {/* Shots render marker*/}
-        {events.map((event) => {
+
+        
+        {filteredEvents.map((event) => {
           // Decide which rim to draw to using teamId and flipCourt
           const eventFlip = event.flipCourt ?? false;
           // If for some reason teamId is missing, fallback to using courtSide (legacy)

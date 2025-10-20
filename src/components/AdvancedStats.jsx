@@ -30,9 +30,13 @@ export default function AdvancedStats({ players, opponentPlayers, events, team }
 
   const teamNetRating = (teamOffensiveRating - teamDefensiveRating).toFixed(1)
 
-  const teamAssistPct = (teamTotals.assists / teamTotals.assists * 100).toFixed(0)
+  const teamAssistPct = (teamTotals.assists > 0)
+    ? (teamTotals.assists / teamTotals.assists * 100).toFixed(0)
+    : 0;
 
-  const teamAssistsTurnOverRatio = (teamTotals.assists / teamTotals.turnOver).toFixed(1)
+  const teamAssistsTurnOverRatio = (teamTotals.assists > 0)
+    ? (teamTotals.assists / teamTotals.turnOver).toFixed(1)
+    : 0;
 
   const teamPossessionsAssist = teamTotals.fga + 0.44 * teamTotals.freeThrowA + teamTotals.turnOver;
   const teamAssistRatio  = teamPossessionsAssist > 0
@@ -65,22 +69,26 @@ export default function AdvancedStats({ players, opponentPlayers, events, team }
     : 0;
 
   const teamUsageRate =  teamTotals.teamTotalUsed > 0
-  ? Number((teamTotals.playerUsed / teamTotals.teamTotalUsed) * 100).toFixed(1)
-  : 0;
+    ? Number((teamTotals.playerUsed / teamTotals.teamTotalUsed) * 100).toFixed(1)
+    : 0;
+
+  const teamPace = (teamPossessionsRating);
 
   const gamePieDenominator = (teamTotals.pieNumerator || 0) + (opponentTotals?.pieNumerator || 0);
   const teamPiePct = teamTotals.pieNumerator && gamePieDenominator > 0
     ? Number((teamTotals.pieNumerator / gamePieDenominator * 100).toFixed(1))
     : 0;
 
-  const teamFreeThrowRate = (teamTotals.freeThrowA / teamTotals.fga).toFixed(1);
+  const teamFreeThrowRate = (teamTotals.freeThrowA > 0)
+    ? (teamTotals.freeThrowA / teamTotals.fga).toFixed(1)
+    : 0;
  
   const renderRow = (player, isStarter = false) => {
     {/* Players Advanced Stats */}
 
     const stats = teamPlayerStats.find((s) => s.id === player.id) || {};
 
-    const possession = stats.fga + 0.44 * stats.freeThrowA + stats.turnOver;
+    const possession = (stats.fga + 0.44 * stats.freeThrowA + stats.turnOver).toFixed(1);
     const offensiveRating = (possession > 0)
       ? ((stats.pts / possession) * 100).toFixed(1)
       : 0;
@@ -134,6 +142,8 @@ export default function AdvancedStats({ players, opponentPlayers, events, team }
       ? ((stats.playerUsed / teamTotals.teamTotalUsed) * 100).toFixed(1)
       : 0;
 
+    const pace = stats.fga - stats.oReb + stats.turnOver + 0.44 * stats.freeThrowA;
+
     const piePctGame = (stats.pieNumerator && gamePieDenominator > 0)
     ? Number((stats.pieNumerator / gamePieDenominator * 100).toFixed(1))
     : 0;
@@ -183,7 +193,11 @@ export default function AdvancedStats({ players, opponentPlayers, events, team }
 
         <td>{usageRate}%</td>
 
-        <td>{piePctGame}%</td>
+        {/* <td>{pace}</td> */}
+
+        <td>{piePctGame}</td>
+
+        <td>{possession}</td>
 
         <td>{freeThrowRate}</td>
 
@@ -230,9 +244,11 @@ export default function AdvancedStats({ players, opponentPlayers, events, team }
 
               <th>USG%</th>
 
-              {/* <th>PACE</th> */}
+              {/*<th>PACE</th>*/}
 
               <th>PIE</th>
+
+              <th>POSS</th>
 
               <th>FT Rate</th>
 
@@ -278,7 +294,11 @@ export default function AdvancedStats({ players, opponentPlayers, events, team }
 
               <td>{teamUsageRate}%</td>
 
-              <td>{teamPiePct}%</td>
+              {/* <td>{teamPace}</td> */}
+
+              <td>{teamPiePct}</td>
+
+              <td>{teamPossessionsRating}</td>
 
               <td>{teamFreeThrowRate}</td>
               
