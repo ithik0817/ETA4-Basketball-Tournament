@@ -2,8 +2,20 @@
 import React, { useMemo } from "react";
 import usePlayerStats from "../hooks/usePlayerStats";
 
-export default function Stats({ players, events, team }) {
-  const { playerStats, totals } = usePlayerStats(players, events);
+export default function Stats({ teamId, teamName, players, events, courtFilter, role }) {
+
+  const { team: teamFilter, player: playerFilter, quarter: quarterFilter } = courtFilter || {};
+
+  const filteredEvents = useMemo(() => {
+    return events.filter((e) => {
+      const matchQuarter =
+        !quarterFilter || quarterFilter === "all" || e.quarter?.toString() === quarterFilter;
+      return matchQuarter;
+    });
+  }, [events, quarterFilter]);
+
+  const { playerStats, totals } = usePlayerStats(players, filteredEvents);
+
   const { starters, bench } = useMemo(() => {
     const starters = players
       .filter((p) => p.starter)
@@ -19,29 +31,36 @@ export default function Stats({ players, events, team }) {
   const teamFgPct = totals.fga > 0 ? ((totals.fgm / totals.fga) * 100).toFixed(1) : "0.0";
   const freeThrowPct = totals.freeThrowA > 0 ? ((totals.freeThrowM / totals.freeThrowA) * 100).toFixed(1) : "0.0";
 
-  // Helper to render a player stats row.
   const renderRow = (player, isStarter = false) => {
     const stats = playerStats.find((s) => s.id === player.id) || {};
+    const isPlayerHighlight =
+      playerFilter && playerFilter !== "all" && player.id === playerFilter;
+    const isTeamHighlight =
+      teamFilter && teamFilter !== "all" && teamId === teamFilter && role === 'admin';
+ 
+    const highlightClass = isPlayerHighlight
+      ? "highlight-player"
+      : isTeamHighlight
+      ? "highlight-team"
+      : "";
+
     return (
-      <tr key={player.id}>
+      <tr key={player.id} className={highlightClass}>
         <td className="fixed-left-cell">
-          {isStarter ? 
-            <strong>#{player.number} - {player.name}</strong> 
-            : <>#{player.number} - {player.name}</>
-          }
+          {isStarter ? (
+            <strong>#{player.number} - {player.name}</strong>
+          ) : (
+            <>#{player.number} - {player.name}</>
+          )}
         </td>
         <td>{stats.twosM ?? 0}-{stats.twosA ?? 0}</td>
         <td>{stats.twoPct ?? "0.0"}%</td>
-
         <td>{stats.threesM ?? 0}-{stats.threesA ?? 0}</td>
         <td>{stats.threePct ?? "0.0"}%</td>
-
         <td>{stats.fgm ?? 0}-{stats.fga ?? 0}</td>
         <td>{stats.fgPct ?? "0.0"}%</td>
-
         <td>{stats.freeThrowM ?? 0}-{stats.freeThrowA ?? 0}</td>
         <td>{stats.freeThrowPct ?? "0.0"}%</td>
-
         <td>{stats.oReb ?? 0}</td>
         <td>{stats.dReb ?? 0}</td>
         <td>{stats.reb ?? 0}</td>
@@ -50,7 +69,6 @@ export default function Stats({ players, events, team }) {
         <td>{stats.blk ?? 0}</td>
         <td>{stats.turnOver ?? 0}</td>
         <td>{stats.pf ?? 0}</td>
-
         <td>{stats.pts ?? 0}</td>
       </tr>
     );
@@ -58,7 +76,7 @@ export default function Stats({ players, events, team }) {
 
   return (
     <div className="team-stats-container">
-      <h2>{team} Stats</h2>
+      <h2>{teamName} Stats</h2>
       {players.length === 0 ? (
         <p>No players added yet.</p>
       ) : (
@@ -66,53 +84,30 @@ export default function Stats({ players, events, team }) {
           <thead>
             <tr className="table-header-row">
               <th>Player</th>
-
-              <th>2PT</th>
-              <th>2PT%</th>
-
-              <th>3PT</th>
-              <th>3PT%</th>
-
-              <th>FG</th>
-              <th>FG%</th>
-
-              <th>FT</th>
-              <th>FT%</th>
-
-              <th>OREB</th>
-              <th>DREB</th>
-              <th>REB</th>
-              <th>AST</th>
-              <th>STL</th>
-              <th>BLK</th>
-              <th>TO</th>
-              <th>PF</th>
-              
+              <th>2PT</th><th>2PT%</th>
+              <th>3PT</th><th>3PT%</th>
+              <th>FG</th><th>FG%</th>
+              <th>FT</th><th>FT%</th>
+              <th>OREB</th><th>DREB</th><th>REB</th>
+              <th>AST</th><th>STL</th><th>BLK</th>
+              <th>TO</th><th>PF</th>
               <th>PTS</th>
             </tr>
           </thead>
           <tbody>
-            {/* Starters */}
             {starters.map((p) => renderRow(p, true))}
-
-            {/* Bench */}
             {bench.map((p) => renderRow(p, false))}
 
-            {/* Totals */}
             <tr className="team-totals-row">
               <td className="fixed-left-cell"><strong>Team Total</strong></td>
               <td>{totals.twosM}-{totals.twosA}</td>
               <td>{teamTwoPct}%</td>
-
               <td>{totals.threesM}-{totals.threesA}</td>
               <td>{teamThreePct}%</td>
-
               <td>{totals.fgm}-{totals.fga}</td>
               <td>{teamFgPct}%</td>
-
               <td>{totals.freeThrowM}-{totals.freeThrowA}</td>
               <td>{freeThrowPct}%</td>
-              
               <td>{totals.oReb}</td>
               <td>{totals.dReb}</td>
               <td>{totals.reb}</td>
@@ -121,7 +116,6 @@ export default function Stats({ players, events, team }) {
               <td>{totals.blk}</td>
               <td>{totals.turnOver}</td>
               <td>{totals.pf}</td>
-              
               <td>{totals.pts}</td>
             </tr>
           </tbody>

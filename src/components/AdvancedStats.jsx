@@ -2,7 +2,16 @@
 import React, { useMemo } from "react";
 import usePlayerStats from "../hooks/usePlayerStats";
 
-export default function AdvancedStats({ players, opponentPlayers, events, team }) {
+export default function AdvancedStats({ teamId, teamName, players, opponentPlayers, events, courtFilter, role }) {
+  const { team: teamFilter, player: playerFilter, quarter: quarterFilter } = courtFilter || {};
+
+  const filteredEvents = useMemo(() => {
+    return events.filter((e) => {
+      const matchQuarter =
+        !quarterFilter || quarterFilter === "all" || e.quarter?.toString() === quarterFilter;
+      return matchQuarter;
+    });
+  }, [events, quarterFilter]);
 
   const { starters, bench } = useMemo(() => {
     const starters = players
@@ -14,9 +23,8 @@ export default function AdvancedStats({ players, opponentPlayers, events, team }
     return { starters, bench };
   }, [players]);
 
-  {/* Teams Advanced Stats */}
-  const { playerStats: teamPlayerStats, totals: teamTotals } = usePlayerStats(players, events);
-  const { playerStats: opponentPlayerStats, totals: opponentTotals } = usePlayerStats(opponentPlayers || [], events || []);
+  const { playerStats: teamPlayerStats, totals: teamTotals } = usePlayerStats(players, filteredEvents);
+  const { playerStats: opponentPlayerStats, totals: opponentTotals } = usePlayerStats(opponentPlayers || [], filteredEvents || []);
 
   const teamPossessionsRating = teamTotals.fga - teamTotals.oReb + teamTotals.turnOver + 0.44 * teamTotals.freeThrowA;
   const teamOffensiveRating = teamPossessionsRating > 0
@@ -24,7 +32,7 @@ export default function AdvancedStats({ players, opponentPlayers, events, team }
     : 0;
 
   const opponentTeamPossessionsRating = opponentTotals.fga - opponentTotals.oReb + opponentTotals.turnOver + 0.44 * opponentTotals.freeThrowA;
-  const teamDefensiveRating = (opponentTeamPossessionsRating > 0) 
+  const teamDefensiveRating = (opponentTeamPossessionsRating > 0)
     ? ((opponentTotals.pts / opponentTeamPossessionsRating) * 100).toFixed(1)
     : 0;
 
@@ -82,11 +90,21 @@ export default function AdvancedStats({ players, opponentPlayers, events, team }
   const teamFreeThrowRate = (teamTotals.freeThrowA > 0)
     ? (teamTotals.freeThrowA / teamTotals.fga).toFixed(1)
     : 0;
- 
+
   const renderRow = (player, isStarter = false) => {
-    {/* Players Advanced Stats */}
 
     const stats = teamPlayerStats.find((s) => s.id === player.id) || {};
+
+    const isPlayerHighlight =
+      playerFilter && playerFilter !== "all" && player.id === playerFilter;
+    const isTeamHighlight =
+      teamFilter && teamFilter !== "all" && teamId === teamFilter && role === 'admin';
+
+    const highlightClass = isPlayerHighlight
+      ? "highlight-player"
+      : isTeamHighlight
+      ? "highlight-team"
+      : "";
 
     const possession = (stats.fga + 0.44 * stats.freeThrowA + stats.turnOver).toFixed(1);
     const offensiveRating = (possession > 0)
@@ -158,7 +176,7 @@ export default function AdvancedStats({ players, opponentPlayers, events, team }
     
 
     return (
-      <tr key={player.id}>
+      <tr key={player.id} className={highlightClass}>
         {/* Players Advanced Stats Data */}
         <td className="fixed-left-cell">
           {isStarter ? 
@@ -166,41 +184,23 @@ export default function AdvancedStats({ players, opponentPlayers, events, team }
             : <>#{player.number} - {player.name}</>
           }
         </td>
-
         <td>{offensiveRating}</td>
-
         <td>{defensiveRating}</td>
-
         <td>{netRating}</td>
-
         <td>{assistPct}%</td>
-
         <td>{assistTurnOverRatio}</td>
-
         <td>{assistRatio}</td>
-
         <td>{oRebPct}%</td>
-
         <td>{dRebPct}%</td>
-
         <td>{rebPct}%</td>
-
         <td>{turnoverRatio}</td>
-
         <td>{effectiveFgPct ?? 0}%</td>
-
         <td>{trueShootingPct ?? 0}%</td>
-
         <td>{usageRate}%</td>
-
         {/* <td>{pace}</td> */}
-
         <td>{piePctGame}</td>
-
         <td>{possession}</td>
-
         <td>{freeThrowRate}</td>
-
       </tr>
     );
   };
@@ -208,52 +208,31 @@ export default function AdvancedStats({ players, opponentPlayers, events, team }
   return (
     <div className="team-stats-container">
       {/* Advanced Stats Row Header*/}
-      <h2>{team} Advanced Stats</h2>
+      <h2>{teamName} Advanced Stats</h2>
       {players.length === 0 ? (
         <p>No players added yet.</p>
       ) : (
         <table className="player-stats-table">
           <thead>
             <tr className="table-header-row">
-
               <th>Player</th>
-
               <th>OFFRTG</th>
-
               <th>DEFRTG</th>
-
               <th>NETRTG*</th>
-
               <th>AST%</th>
-
               <th>AST/TO</th>
-
               <th>AST Ratio</th>
-
               <th>OREB%</th>
-
               <th>DREB%</th>
-
               <th>REB%</th>
-
               <th>TO Ratio</th>
-
               <th>eFG%</th>
-
               <th>TS%</th>
-
               <th>USG%</th>
-
               {/*<th>PACE</th>*/}
-
               <th>PIE</th>
-
               <th>POSS</th>
-
               <th>FT Rate</th>
-
-              
-
             </tr>
           </thead>
           <tbody>
@@ -267,41 +246,23 @@ export default function AdvancedStats({ players, opponentPlayers, events, team }
             <tr className="team-totals-row">
               {/* Teams Advanced Stats Data */}
               <td className="fixed-left-cell"><strong>Team Total</strong></td>
-
               <td>{teamOffensiveRating}</td>
-
               <td>{teamDefensiveRating}</td>
-
               <td>{teamNetRating}</td>
-
               <td>{teamAssistPct}%</td>
-
               <td>{teamAssistsTurnOverRatio}</td>
-
               <td>{teamAssistRatio}</td>
-
               <td>{teamORebPct}%</td>
-
               <td>{teamDRebPct}%</td>
-
               <td>{teamRebPct}%</td>
-
               <td>{teamTurnoverRatio}</td>
-
               <td>{teamEffectiveFgPct}%</td>
-
               <td>{teamTrueShootingPct}%</td>
-
               <td>{teamUsageRate}%</td>
-
               {/* <td>{teamPace}</td> */}
-
               <td>{teamPiePct}</td>
-
               <td>{teamPossessionsRating}</td>
-
               <td>{teamFreeThrowRate}</td>
-              
             </tr>
           </tbody>
         </table>

@@ -56,9 +56,6 @@ function App() {
     quarter: "all"
   });
 
-  console.log("setCourtFilter", setCourtFilter)
-  console.log("courtFilter", courtFilter)
-
   const sortedEvents = useMemo(() => {
     if (!events || events.length === 0) {
       return [];
@@ -559,42 +556,74 @@ function App() {
     return null;
   };
 
+  const renderStatsForTeam = (teamId, teamName, players) => {
+    return (
+      <Stats
+        teamId={teamId}
+        teamName={teamName}
+        players={players}
+        events={events}
+        courtFilter={courtFilter}
+        role={selectedRole}
+      />
+    );
+  };
+  const renderAdvancedStatsForTeam = (teamId, teamName, players, opponentPlayers) => {
+    return (
+      <AdvancedStats
+        teamId={teamId}
+        teamName={teamName}
+        players={players}
+        opponentPlayers={opponentPlayers}
+        events={events}
+        courtFilter={courtFilter}
+        role={selectedRole}
+      />
+    );
+  };
+
   const renderStats = () => {
     if (selectedRole === 'awayOffense' || selectedRole === 'awayDefense') {
       return (
         <>
-          <Stats 
-            players={awayRoster}
-            events={events}
-            team={awayTeamName}
-          />
-          <AdvancedStats 
-            players={awayRoster}
-            opponentPlayers={homeRoster}
-            events={events}
-            team={awayTeamName}
-          />
+          {renderStatsForTeam(awayTeamId, awayTeamName, awayRoster)}
+          {renderAdvancedStatsForTeam(awayTeamId, awayTeamName, awayRoster, homeRoster)}
         </>      
       );
     } else if (selectedRole === 'homeOffense' || selectedRole === 'homeDefense') {
       return (
         <>
-          <Stats 
-            players={homeRoster}
-            events={events}
-            team={homeTeamName}
-          />
-          <AdvancedStats 
-            players={homeRoster}
-            opponentPlayers={awayRoster}
-            events={events}
-            team={homeTeamName}
-          />
+          {renderStatsForTeam(homeTeamId, homeTeamName, homeRoster)}
+          {renderAdvancedStatsForTeam(homeTeamId, homeTeamName, homeRoster, awayRoster)}
         </>        
       );
     } return null;
   };
 
+  const filteredEvents = useMemo(() => {
+    return sortedEvents.filter((e) => {
+      const matchTeam =
+        !courtFilter?.team || courtFilter.team === "all" || e.teamId === courtFilter.team;
+      const matchPlayer =
+        !courtFilter?.player || courtFilter.player === "all" || e.playerId === courtFilter.player;
+      const matchQuarter =
+        !courtFilter?.quarter || courtFilter.quarter === "all" || e.quarter?.toString() === courtFilter.quarter;
+
+      return matchTeam && matchPlayer && matchQuarter;
+    });
+  }, [sortedEvents, courtFilter]);
+
+  const eventsByQuarter = useMemo(() => {
+    const grouped = {};
+    filteredEvents.forEach((e) => {
+      const q = e.quarter || "OT";
+      if (!grouped[q]) grouped[q] = [];
+      grouped[q].push(e);
+    });
+    return grouped;
+  }, [filteredEvents]);
+  console.log("filteredEvents", filteredEvents)
+  console.log("eventsByQuarter", eventsByQuarter)
   function formatDate(maybeTimestamp) {
     if (!maybeTimestamp) return "";
     if (typeof maybeTimestamp.toDate === "function") {
@@ -649,7 +678,6 @@ function App() {
                   homeTeamId={homeTeamId} 
                   awayTeamName={awayTeamName}
                   homeTeamName={homeTeamName} 
-                  quarter={currentQuarter}
                   events={events}
                 />
                 <button className="flipCourt-control" onClick={() => setFlipCourt(prev => !prev)}>
@@ -669,7 +697,7 @@ function App() {
                   ))}
                 </div>
               </div>
-              <div className="main-content-wrapper">
+              <div className={`main-content-wrapper ${selectedRole !== "admin" ? "single-view" : ""}`}>
                 <div className="app-container">
                   <div className="app-content"> 
                     <div className="game-layout-container">
@@ -870,54 +898,29 @@ function App() {
                 {renderStats()}
                 {(selectedRole === "admin") && (
                   <>
-                    {/* Stats Table Away Team*/}
-                      <Stats 
-                        players={awayRoster}
-                        events={events}
-                        team={awayTeamName}
-                      />
-                    
-                    {/* Stats Table Away Home*/}
-                      <Stats 
-                        players={homeRoster}
-                        events={events}
-                        team={homeTeamName}
-                      />
-                    </>
-                  )}
-                  {(selectedRole === "admin") && (
-                  <>
-                    {/* Stats Table Away Team*/}
-                      <AdvancedStats 
-                        players={awayRoster}
-                        opponentPlayers={homeRoster}
-                        events={events}
-                        team={awayTeamName}
-                      />
-                    
-                    {/* Stats Table Away Home*/}
-                      <AdvancedStats 
-                        players={homeRoster}
-                        opponentPlayers={awayRoster}
-                        events={events}
-                        team={homeTeamName}
-                      />
-                    </>
-                  )}
-                <div style={{ marginTop: 16, fontSize: 14, color: "#ffffff" }}>
+                    {renderStatsForTeam(awayTeamId, awayTeamName, awayRoster)}
+                    {renderStatsForTeam(homeTeamId, homeTeamName, homeRoster)}
+                    {renderAdvancedStatsForTeam(awayTeamId, awayTeamName, awayRoster, homeRoster)}
+                    {renderAdvancedStatsForTeam(homeTeamId, homeTeamName, homeRoster, awayRoster)}
+                  </>
+                )}
+                <div style={{ marginTop: 10, fontSize: 14, color: "#ffffff" }}>
                 <h3>Play-By-Play Logs</h3>
-                <ul style={{ listStyle: "none", padding: 0 }}>
-                    {sortedEvents.map((e) => {
+                  {Object.entries(eventsByQuarter).map(([quarter, quarterEvents]) => (
+                    <div key={quarter}>
+                  <h4 style={{ marginTop: -5, marginBottom: -10, fontSize: 16, color: "#ffffff" }} >Quarter {quarter}</h4>
+                  <ul style={{ listStyle: "none", padding: 0 }}>
+                    {quarterEvents.map((e) => {
                       const player =
                         homeRoster.find((p) => p.id === e.playerId) ||
                         awayRoster.find((p) => p.id === e.playerId);
 
-                      const homeTeam = { id: homeTeamId, name: homeTeamName };
-                      const awayTeam = { id: awayTeamId, name: awayTeamName };
-
-                      let teamName = "Unknown";
-                      if (e.teamId === homeTeam.id) teamName = homeTeam.name;
-                      if (e.teamId === awayTeam.id) teamName = awayTeam.name;
+                      const teamName =
+                        e.teamId === homeTeamId
+                          ? homeTeamName
+                          : e.teamId === awayTeamId
+                          ? awayTeamName
+                          : "Unknown";
 
                       return (
                         <li key={e.id} className={e.made ? "bold" : ""}>
@@ -927,54 +930,52 @@ function App() {
                             </>
                           ) : (
                             <>
-                          {teamName} {player?.name || "Unknown"}{" "}
-
-                          {e.type === "shot" && (
-                              <>
+                              {teamName} {player?.name || "Unknown"}{" "}
+                              {e.type === "shot" && (
+                                <>
                                   {e.made ? "makes a" : "misses a"}{" "}
-                                  {`${Math.round(e.distFt)}-foot ${e.is3 ? "3-pointer" : 
-                                    "2-pointer"}`}
+                                  {`${Math.round(e.distFt)}-foot ${e.is3 ? "3-pointer" : "2-pointer"}`}
                                   {e.made && e.assistPlayerId && (
-                                      <>
-                                          {" "}
-                                          (assist by{" "}
-                                          <em>
-                                              {homeRoster.find(p => p.id === e.assistPlayerId)?.name ||
-                                              awayRoster.find(p => p.id === e.assistPlayerId)?.name ||
-                                              "Unknown"}
-                                          </em>
-                                          )
-                                      </>
+                                    <>
+                                      {" "}
+                                      (assist by{" "}
+                                      <em>
+                                        {homeRoster.find((p) => p.id === e.assistPlayerId)?.name ||
+                                          awayRoster.find((p) => p.id === e.assistPlayerId)?.name ||
+                                          "Unknown"}
+                                      </em>
+                                      )
+                                    </>
                                   )}
-                              </>
+                                </>
+                              )}
+                              {e.type === "freeThrow" && (
+                                <>
+                                  {e.made
+                                    ? "makes a free throw for 1 point."
+                                    : "misses a free throw for 1 point"}
+                                </>
+                              )}
+                              {e.type === "offRebound" && "grabs an offensive rebound"}
+                              {e.type === "defRebound" && "grabs a defensive rebound"}
+                              {e.type === "turnOver" && "turns the ball over"}
+                              {e.foulType === "personal" && "commits a personal foul"}
+                              {e.foulType === "offensive" && "commits an offensive foul"}
+                              {e.foulType === "defensive" && "commits a defensive foul"}
+                              {e.foulType === "technical" && "commits a technical foul"}
+                              {e.type === "steal" && "comes up with a steal."}
+                              {e.type === "block" && "blocks the shot."}
+                            </>
                           )}
-                          {e.type === "freeThrow" && (
-                              <>
-                                  {e.made ? "makes a free throw for 1 point." : 
-                                  "misses a free throw for 1 point"}{" "}
-                              </>
-                          )}
-
-                          {e.type === "offRebound" && "grabs an offensive rebound"}
-                          {e.type === "defRebound" && "grabs a defensive rebound"}
-                          {e.type === "turnOver" && "turns the ball over"}
-                          {e.foulType === "personal" && "commits a personal foul"}
-                          {e.foulType === "offensive" && "commits a offensive foul"}
-                          {e.foulType === "defensive" && "commits a defensive foul"}
-                          {e.foulType === "technical" && "commits a technical foul"}
-                          {e.type === "steal" && "comes up with a steal."}
-                          {e.type === "block" && "blocks the shot."}
-                          </>
-                          )} 
-                      </li>
+                        </li>
                       );
                     })}
-                </ul>
+                  </ul>
+                 </div>
+                 ))}
               </div>
             </>
           )}
-
-          
         </>
       )}
     </main>

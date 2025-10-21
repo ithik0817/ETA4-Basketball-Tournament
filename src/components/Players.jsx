@@ -25,6 +25,21 @@ export default function Players({
 
   const [showFoulPopup, setShowFoulPopup] = useState(false);
   const [selectedFoulPlayer, setSelectedFoulPlayer] = useState(null);
+
+  const [pendingAction, setPendingAction] = useState(null);
+  const [showPlayerPopup, setShowPlayerPopup] = useState(false);
+
+  const actionDisplayNames = {
+    defRebound: "Defensive Rebound",
+    offRebound: "Offensive Rebound",
+    foul: "Foul",
+    steal: "Steal",
+    block: "Block",
+    turnOver: "Turnover",
+    shot: "Shot Attempt",
+    freeThrow: "Free Throw",
+    timeOut: "Timeout",
+  };
   
   useEffect(() => {
     const benchPlayerIds = pendingBenchSubs.map((p) => p.id);
@@ -71,7 +86,7 @@ export default function Players({
   }
 
   const handleActivePlayerClick = (activePlayer) => {
-    console.log("players click")
+
 
     if (pendingBenchSubs.length === 0 || pendingBenchSubs[0].teamId !== teamId) {
       return;
@@ -102,6 +117,136 @@ export default function Players({
     }
     setShowFoulPopup(false);
     setSelectedFoulPlayer(null);
+  };
+
+  useEffect(() => {
+    const handleKeyDown = (e) => {   
+      const key = e.code;
+
+      if (e.key === "Escape") {
+        setShowPlayerPopup(false);
+        setShowFoulPopup(false);
+        setPendingAction(null);
+        setSelectedFoulPlayer(null);
+        return;
+      }
+
+
+      const isDefense = role === "homeDefense" || role === "awayDefense";
+      const isOffense = role === "homeOffense" || role === "awayOffense";
+      if (!isDefense && !isOffense) 
+        return;
+      
+      if (showFoulPopup)
+        return;
+
+      if (!pendingAction) {
+        if (isDefense) {
+          switch (key) {
+            case "Digit1":
+            case "Numpad1":
+              setPendingAction("defRebound");
+              setShowPlayerPopup(true);
+              break;
+            case "Digit2":
+            case "Numpad2":
+              setPendingAction("foul");
+              setShowPlayerPopup(true);
+              break;
+            case "Digit3":
+            case "Numpad3":
+              setPendingAction("steal");
+              setShowPlayerPopup(true);
+              break;
+            case "Digit4":
+            case "Numpad4":
+              setPendingAction("block");
+              setShowPlayerPopup(true);
+              break;
+            default:
+              break;
+          }
+        } else if (isOffense) {
+          switch (key) {
+            case "Digit1":
+            case "Numpad1":
+              setPendingAction("offRebound");
+              setShowPlayerPopup(true);
+              break;
+            case "Digit2":
+            case "Numpad2":
+              setPendingAction("turnOver");
+              setShowPlayerPopup(true);
+              break;
+            case "Digit3":
+            case "Numpad3":
+              setPendingAction("foul");
+              setShowPlayerPopup(true);
+              break;
+            default:
+              break;
+          }
+        }
+      }
+      
+      else if (showPlayerPopup) {
+        const playerIndex = parseInt(e.key) - 1;
+        if (!isNaN(playerIndex) && players[playerIndex]) {1
+          const player = players[playerIndex];
+          if (pendingAction === "foul") {
+            setSelectedFoulPlayer(player);
+            setShowFoulPopup(true);
+          } else {
+            onAddEvent &&
+              onAddEvent({
+                type: pendingAction,
+                playerId: player.id,
+                teamId,
+                quarter,
+                role,
+              });
+          }
+          setPendingAction(null);
+          setShowPlayerPopup(false);
+        }
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [players, pendingAction, showPlayerPopup, showFoulPopup, teamId, quarter, role, onAddEvent]);
+
+
+  useEffect(() => {
+    if (!showFoulPopup) return;
+
+    const handleFoulKey = (e) => {
+      const key = e.key;
+
+      const options = (() => {
+        if (role === "admin") return ["personal", "offensive", "defensive", "technical"];
+        if (role === "homeDefense" || role === "awayDefense")
+          return ["personal", "defensive", "technical"];
+        if (role === "homeOffense" || role === "awayOffense")
+          return ["personal", "offensive", "technical"];
+        return [];
+      })();
+
+      const index = parseInt(key) - 1;
+      if (index >= 0 && index < options.length) {
+        e.preventDefault();
+        handleFoulTypeSelect(options[index]);
+      }
+    };
+
+    window.addEventListener("keydown", handleFoulKey);
+    return () => window.removeEventListener("keydown", handleFoulKey);
+  }, [showFoulPopup, role, handleFoulTypeSelect]);
+
+  const handleCancelAll = () => {
+    setShowPlayerPopup(false);
+    setShowFoulPopup(false);
+    setPendingAction(null);
   };
 
   return (
@@ -148,8 +293,9 @@ export default function Players({
 
               {/* Inline action buttons */}
               <div style={{ display: "flex", gap: 6 }}>
-                {(role === 'homeOffense' || role === 'awayOffense' || role === "admin") && (
+                {role === "admin" ? (
                   <>
+                    {/* Combine both sets for admin */}
                     <button
                       className="mini-btn oReb"
                       onClick={() =>
@@ -157,13 +303,28 @@ export default function Players({
                         onAddEvent({
                           type: "offRebound",
                           playerId: p.id,
-                          teamId: teamId,
-                          quarter: quarter,
-                          role: role,
+                          teamId,
+                          quarter,
+                          role,
                         })
                       }
                     >
                       OReb
+                    </button>
+                    <button
+                      className="mini-btn dReb"
+                      onClick={() =>
+                        onAddEvent &&
+                        onAddEvent({
+                          type: "defRebound",
+                          playerId: p.id,
+                          teamId,
+                          quarter,
+                          role,
+                        })
+                      }
+                    >
+                      DReb
                     </button>
                     <button
                       className="mini-btn to"
@@ -172,32 +333,16 @@ export default function Players({
                         onAddEvent({
                           type: "turnOver",
                           playerId: p.id,
-                          teamId: teamId,
-                          quarter: quarter,
-                          role: role,
+                          teamId,
+                          quarter,
+                          role,
                         })
                       }
                     >
                       TO
                     </button>
-                  </>
-                )}
-                {(role === "homeDefense" || role === "awayDefense" || role === "admin") && (
-                  <>                    
-                    <button
-                      className="mini-btn dReb"
-                      onClick={() =>
-                        onAddEvent &&
-                        onAddEvent({
-                          type: "defRebound",
-                          playerId: p.id,
-                          teamId: teamId,
-                          quarter: quarter,
-                          role: role,
-                        })
-                      }
-                    >
-                      DReb
+                    <button className="mini-btn pk" onClick={() => handleFoulClick(p)}>
+                      PF
                     </button>
                     <button
                       className="mini-btn stl"
@@ -206,9 +351,9 @@ export default function Players({
                         onAddEvent({
                           type: "steal",
                           playerId: p.id,
-                          teamId: teamId,
-                          quarter: quarter,
-                          role: role,
+                          teamId,
+                          quarter,
+                          role,
                         })
                       }
                     >
@@ -221,21 +366,103 @@ export default function Players({
                         onAddEvent({
                           type: "block",
                           playerId: p.id,
-                          teamId: teamId,
-                          quarter: quarter,
-                          role: role,
+                          teamId,
+                          quarter,
+                          role,
                         })
                       }
                     >
                       BLK
                     </button>
                   </>
-                )}
-                <button
-                  className="mini-btn pk"
-                  onClick={() => handleFoulClick(p)}>
-                  PF
-                </button>
+                ) : role === "homeOffense" || role === "awayOffense" ? (
+                  <>
+                    <button
+                      className="mini-btn oReb"
+                      onClick={() =>
+                        onAddEvent &&
+                        onAddEvent({
+                          type: "offRebound",
+                          playerId: p.id,
+                          teamId,
+                          quarter,
+                          role,
+                        })
+                      }
+                    >
+                      OReb
+                    </button>
+                    <button
+                      className="mini-btn to"
+                      onClick={() =>
+                        onAddEvent &&
+                        onAddEvent({
+                          type: "turnOver",
+                          playerId: p.id,
+                          teamId,
+                          quarter,
+                          role,
+                        })
+                      }
+                    >
+                      TO
+                    </button>
+                    <button className="mini-btn pk" onClick={() => handleFoulClick(p)}>
+                      PF
+                    </button>
+                  </>
+                ) : role === "homeDefense" || role === "awayDefense" ? (
+                  <>
+                    <button
+                      className="mini-btn dReb"
+                      onClick={() =>
+                        onAddEvent &&
+                        onAddEvent({
+                          type: "defRebound",
+                          playerId: p.id,
+                          teamId,
+                          quarter,
+                          role,
+                        })
+                      }
+                    >
+                      DReb
+                    </button>
+                    <button className="mini-btn pk" onClick={() => handleFoulClick(p)}>
+                      PF
+                    </button>
+                    <button
+                      className="mini-btn stl"
+                      onClick={() =>
+                        onAddEvent &&
+                        onAddEvent({
+                          type: "steal",
+                          playerId: p.id,
+                          teamId,
+                          quarter,
+                          role,
+                        })
+                      }
+                    >
+                      STL
+                    </button>
+                    <button
+                      className="mini-btn blk"
+                      onClick={() =>
+                        onAddEvent &&
+                        onAddEvent({
+                          type: "block",
+                          playerId: p.id,
+                          teamId,
+                          quarter,
+                          role,
+                        })
+                      }
+                    >
+                      BLK
+                    </button>
+                  </>
+                ) : null}
               </div>
             </li>
           );
@@ -300,7 +527,77 @@ export default function Players({
               );
             })()}
             <button
-              onClick={() => setShowFoulPopup(false)}
+              onClick={handleCancelAll}
+              style={{
+                marginTop: "10px",
+                padding: "8px 16px",
+                border: "1px solid #ccc",
+                cursor: "pointer",
+              }}
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* 🟦 Player selection popup */}
+      {showPlayerPopup && (
+        <div
+          className="popup-overlay"
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            width: "100vw",
+            height: "100vh",
+            background: "rgba(0,0,0,0.5)",
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            zIndex: 999,
+          }}
+        >
+          <div
+            className="popup-content"
+            style={{
+              background: "#191E31",
+              padding: "20px",
+              borderRadius: "12px",
+              boxShadow: "0 4px 10px rgba(0,0,0,0.3)",
+              textAlign: "center",
+              border: "4px solid #ccc",
+            }}
+          >
+            <h3>Select Player for {actionDisplayNames[pendingAction] || pendingAction}</h3>
+            {players.slice(0, 5).map((p, idx) => (
+              <button
+                key={p.id}
+                onClick={() => {
+                  onAddEvent &&
+                    onAddEvent({
+                      type: pendingAction,
+                      playerId: p.id,
+                      teamId,
+                      quarter,
+                      role,
+                    });
+                  setPendingAction(null);
+                  setShowPlayerPopup(false);
+                }}
+                style={{
+                  display: "block",
+                  margin: "6px auto",
+                  padding: "8px 12px",
+                  borderRadius: "8px",
+                  cursor: "pointer",
+                }}
+              >
+                #{p.number} - {p.name}
+              </button>
+            ))}
+            <button
+              onClick={handleCancelAll}
               style={{
                 marginTop: "10px",
                 padding: "8px 16px",

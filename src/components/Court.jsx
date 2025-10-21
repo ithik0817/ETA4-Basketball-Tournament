@@ -70,7 +70,7 @@ export default function Court({
 
     if (popupStep !== "player") return;
 
-    if (e.code.startsWith("Digit")) {
+    if (/^(Digit|Numpad)[0-9]$/.test(e.code)) {
       const idx = parseInt(e.key, 10) - 1;
       if (!isNaN(idx) && idx >= 0 && idx < popupPlayers.length) {
         const p = popupPlayers[idx];
@@ -90,6 +90,61 @@ export default function Court({
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [handleKeyDown]);
+
+  useEffect(() => {
+    if (popupStep !== "result" || !pendingShot) return;
+
+    const handleKeyDown = (e) => {
+      if (e.key === "1") {
+        // Made
+        if (pendingShot.isFreeThrow) {
+          finalizeShot(true);
+        } else {
+          setPendingShot({ ...pendingShot, made: true });
+          setPopupStep("assist");
+        }
+      } else if (e.key === "2") {
+        // Missed
+        finalizeShot(false);
+      } else if (e.key === "Escape") {
+        handleCancel();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [popupStep, pendingShot]);
+
+  useEffect(() => {
+    if (popupStep !== "assist" || !pendingShot) return;
+
+    const activePlayers =
+      pendingShot.teamId === awayTeamId
+        ? activeAwayPlayers
+        : activeHomePlayers;
+
+    const assistOptions = activePlayers.filter(
+      (p) => p.id !== pendingShot.playerId
+    );
+
+    const handleKeyDown = (e) => {
+      const key = e.key;
+
+      if (/^[1-9]$/.test(key)) {
+        const index = parseInt(key, 10) - 1;
+        if (assistOptions[index]) {
+          finalizeShot(true, assistOptions[index].id);
+        }
+      } else if (key === "0" || key.toLowerCase() === "n") {
+        finalizeShot(true, null);
+      } else if (key === "Escape") {
+        handleCancel();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [popupStep, pendingShot, activeAwayPlayers, activeHomePlayers]);
 
   const rimLeftPx = {
     x: ftToPxX(RIM_OFFSET_FT),
@@ -332,18 +387,36 @@ export default function Court({
   const leftColumnPlayers = (flipCourt ? activeAwayPlayers : activeHomePlayers)
     .map(p => ({ ...p, teamId: flipCourt ? awayTeamId : homeTeamId }));
 
+  const effectiveTeam =
+    role === "admin"
+      ? filterTeam
+      : (role === "homeOffense" || role === "homeDefense")
+      ? homeTeamId
+      : (role === "awayOffense" || role === "awayDefense")
+      ? awayTeamId
+      : filterTeam;
+
+  const effectivePlayer = filterPlayer;
+
+  const effectiveQuarter = filterQuarter;
+
   const filteredEvents = events.filter((e) => {
-    const matchTeam = filterTeam === "all" || e.teamId === filterTeam;
-    const matchPlayer = filterPlayer === "all" || e.playerId === filterPlayer;
-    const matchQuarter = filterQuarter === "all" || e.quarter?.toString() === filterQuarter;
+    const matchTeam = effectiveTeam === "all" || e.teamId === effectiveTeam;
+    const matchPlayer = effectivePlayer === "all" || e.playerId === effectivePlayer;
+    const matchQuarter = effectiveQuarter === "all" || e.quarter?.toString() === effectiveQuarter;
     return matchTeam && matchPlayer && matchQuarter;
   });
 
   useEffect(() => {
-    if (onFilterChange) {
-      onFilterChange({ team: filterTeam, player: filterPlayer, quarter: filterQuarter });
-    }
-  }, [filterTeam, filterPlayer, filterQuarter]);
+  if (onFilterChange) {
+    onFilterChange({
+      team: effectiveTeam,
+      player: effectivePlayer,
+      quarter: effectiveQuarter,
+    });
+  }
+
+}, [effectiveTeam, effectivePlayer, effectiveQuarter]);
 
   return (
   <div className="court-main">
@@ -352,15 +425,37 @@ export default function Court({
       <label>
         Team:
         <select
-          value={filterTeam}
+          value={
+            role === "homeOffense" || role === "homeDefense"
+              ? homeTeamId
+              : role === "awayOffense" || role === "awayDefense"
+              ? awayTeamId
+              : filterTeam
+          }
           onChange={(e) => {
-            setFilterTeam(e.target.value);
-            setFilterPlayer("all"); // reset player when switching team
+            if (role === "admin") {
+              setFilterTeam(e.target.value);
+              setFilterPlayer("all"); // reset player when switching team
+            }
           }}
+          disabled={role !== "admin"}
         >
-          <option value="all">All Teams</option>
-          <option value={homeTeamId}>{homeTeamName}</option>
-          <option value={awayTeamId}>{awayTeamName}</option>
+          {/* Admin can see all options */}
+          {role === "admin" && (
+            <>
+              <option value="all">All Teams</option>
+              <option value={homeTeamId}>{homeTeamName}</option>
+              <option value={awayTeamId}>{awayTeamName}</option>
+            </>
+          )}
+
+          {(role === "homeOffense" || role === "homeDefense") && (
+            <option value={homeTeamId}>{homeTeamName}</option>
+          )}
+
+          {(role === "awayOffense" || role === "awayDefense") && (
+            <option value={awayTeamId}>{awayTeamName}</option>
+          )}
         </select>
       </label>
 
@@ -371,18 +466,24 @@ export default function Court({
           onChange={(e) => setFilterPlayer(e.target.value)}
         >
           <option value="all">All Players</option>
-          {filterTeam === homeTeamId &&
-            homeRoster.map((p) => (
-              <option key={p.id} value={p.id}>
-                #{p.number} {p.name}
-              </option>
-            ))}
-          {filterTeam === awayTeamId &&
-            awayRoster.map((p) => (
-              <option key={p.id} value={p.id}>
-                #{p.number} {p.name}
-              </option>
-            ))}
+
+          {effectiveTeam === homeTeamId &&
+            [...homeRoster]
+              .sort((a, b) => a.number - b.number)
+              .map((p) => (
+                <option key={p.id} value={p.id}>
+                  #{p.number} - {p.name}
+                </option>
+              ))}
+
+          {effectiveTeam === awayTeamId &&
+            [...awayRoster]
+              .sort((a, b) => a.number - b.number)
+              .map((p) => (
+                <option key={p.id} value={p.id}>
+                  #{p.number} - {p.name}
+                </option>
+              ))}
         </select>
       </label>
 
@@ -690,7 +791,7 @@ export default function Court({
             <div className="team-column">
               <h4>{flipCourt ? awayTeamName : homeTeamName}</h4>
               <ul>
-                {leftColumnPlayers.map((p, index) => (
+                {leftColumnPlayers.map((p) => (
                   <li key={p.id}>
                     <button
                       onClick={() => {
@@ -702,7 +803,7 @@ export default function Court({
                         setPopupStep("result");
                       }}
                     >
-                      ({index + 1}) - #{p.number} {p.name}
+                      #{p.number} - {p.name}
                     </button>
                   </li>
                 ))}
@@ -712,7 +813,7 @@ export default function Court({
             <div className="team-column">
               <h4>{flipCourt ? homeTeamName : awayTeamName}</h4>
               <ul>
-                {rightColumnPlayers.map((p, index) => (
+                {rightColumnPlayers.map((p) => (
                   <li key={p.id}>
                     <button
                       onClick={() => {
@@ -724,7 +825,7 @@ export default function Court({
                         setPopupStep("result");
                       }}
                     >
-                      ({leftColumnPlayers.length + index + 1}) - #{p.number} {p.name}
+                      #{p.number} - {p.name}
                     </button>
                   </li>
                 ))}
@@ -755,7 +856,7 @@ export default function Court({
                         setPopupStep("result");
                       }}
                     >
-                      ({index + 1}) - #{p.number} {p.name}
+                      #{p.number} - {p.name}
                     </button>
                   </li>
                 )
@@ -841,7 +942,7 @@ export default function Court({
                         setPopupStep("result"); 
                       }} 
                     > 
-                      ({index + 1}) - #{p.number} {p.name} 
+                      #{p.number} - {p.name} 
                     </button>
                   </li>
                 );
@@ -875,10 +976,16 @@ export default function Court({
               </button>
             </li>
             <li>
-              <button onClick={() => finalizeShot(false)}>Missed</button>
+              <button onClick={() => 
+                finalizeShot(false)}
+              >
+                Missed
+              </button>
             </li>
             <li>
-              <button onClick={handleCancel}>
+              <button onClick={
+                handleCancel}
+              >
                 Cancel
               </button>
             </li>
@@ -895,7 +1002,7 @@ export default function Court({
               : activeHomePlayers
             )
               .filter((p) => p.id !== pendingShot.playerId)
-              .map((p) => (
+              .map((p, index) => (
                 <li key={p.id}>
                   <button
                     onClick={() => finalizeShot(true, p.id)}

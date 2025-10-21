@@ -1,15 +1,10 @@
+// src/components/ScoreTable.jsx
 import React, { useMemo } from "react";
 
-// Define possible quarter labels, including overtime
 const quarterLabels = [1, 2, 3, 4, "OT"];
 
-export default function ScoreTable({
-  awayTeamId, 
-  homeTeamId, 
-  awayTeamName, 
-  homeTeamName, 
-  events 
-}) {
+export default function ScoreTable({ awayTeamId, homeTeamId, awayTeamName, homeTeamName, events }) {
+
   const { 
     homeScoresByQuarter,
     awayScoresByQuarter,
@@ -17,6 +12,7 @@ export default function ScoreTable({
     totalAwayScore,
     hasOT
   } = useMemo(() => {
+    
     const homeScoresByQuarter = {};
     const awayScoresByQuarter = {};
     let totalHomeScore = 0;
@@ -30,16 +26,19 @@ export default function ScoreTable({
     homeScoresByQuarter["OT"] = 0;
     awayScoresByQuarter["OT"] = 0;
 
-    events.forEach(event => {
+    events.forEach((event) => {
       if (event.made) {
+        const quarter = event.quarter || "OT";
+        const points = event.points || 0;
+
         if (event.teamId === homeTeamId) {
-          homeScoresByQuarter[event.quarter] =
-            (homeScoresByQuarter[event.quarter] || 0) + event.points;
-          totalHomeScore += event.points;
+          homeScoresByQuarter[quarter] =
+            (homeScoresByQuarter[quarter] || 0) + points;
+          totalHomeScore += points;
         } else if (event.teamId === awayTeamId) {
-          awayScoresByQuarter[event.quarter] =
-            (awayScoresByQuarter[event.quarter] || 0) + event.points;
-          totalAwayScore += event.points;
+          awayScoresByQuarter[quarter] =
+            (awayScoresByQuarter[quarter] || 0) + points;
+          totalAwayScore += points;
         }
       }
     });
@@ -56,7 +55,7 @@ export default function ScoreTable({
     };
   }, [events, homeTeamId, awayTeamId]);
 
-  const quarterLabels = hasOT ? [1, 2, 3, 4, "OT"] : [1, 2, 3, 4];
+  const visibleQuarters = hasOT ? [1, 2, 3, 4, "OT"] : [1, 2, 3, 4];
 
   return (
     <div className="score-table-container">
@@ -64,7 +63,7 @@ export default function ScoreTable({
         <thead>
           <tr className="table-header-row">
             <th>Team</th>
-            {quarterLabels.map(q => (
+            {visibleQuarters.map((q) => (
               <th key={q}>{q}</th>
             ))}
             <th>Total</th>
@@ -73,14 +72,14 @@ export default function ScoreTable({
         <tbody>
           <tr>
             <td className="team-name">{awayTeamName || "Away Team"}</td>
-            {quarterLabels.map(q => (
+            {visibleQuarters.map((q) => (
               <td key={q}>{awayScoresByQuarter[q]}</td>
             ))}
             <td className="score-total">{totalAwayScore}</td>
           </tr>
           <tr>
             <td className="team-name">{homeTeamName || "Home Team"}</td>
-            {quarterLabels.map(q => (
+            {visibleQuarters.map((q) => (
               <td key={q}>{homeScoresByQuarter[q]}</td>
             ))}
             <td className="score-total">{totalHomeScore}</td>
