@@ -4,7 +4,6 @@ import { db } from "../firebase";
 import { collection, addDoc } from "firebase/firestore";
 
 export const Substitutions = ({
-  side,
   teamName,
   fullRoster,
   activePlayers,
@@ -19,22 +18,15 @@ export const Substitutions = ({
   role,
 }) => {
   const [showConfirmPopup, setShowConfirmPopup] = useState(false);
-  const clickSideRef = useRef(null);
-
-  const isHome = side === "home";
-  const isAway = side === "away";
 
   const benchPlayers = fullRoster
     .filter((player) => !activePlayers.some((p) => p.id === player.id))
     .sort((a, b) => a.number - b.number);
 
   const handleBenchClick = (player) => {
-    console.log("side", side);
-    clickSideRef.current = side;
 
-    // Prevent cross-team selection
     if (pendingBenchSubs.length > 0 && pendingBenchSubs[0].teamId !== teamId) {
-      alert("Please unselect players from the other team first.");
+      alert("Please finish or undo substitution from the other team first.");
       return;
     }
 
@@ -56,10 +48,6 @@ export const Substitutions = ({
   }, [pendingBenchSubs, teamId]);
 
   const handleConfirmSubAll = () => {
-    console.log("Sub All clicked!");
-    console.log("role", role);
-    console.log("side", side);
-    console.log("clickSide", clickSideRef.current);
 
     const thisTeamPending = pendingBenchSubs.filter((p) => p.teamId === teamId);
 

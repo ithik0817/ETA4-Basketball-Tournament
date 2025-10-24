@@ -3,13 +3,10 @@ import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import './App.css'
 import Header from './components/Header'
 import Auth from './components/Auth'
-import { auth, db } from './firebase'
-import { collection, doc, getDoc, getDocs, addDoc, deleteDoc, onSnapshot, query, orderBy, where } from 'firebase/firestore';
-import { onAuthStateChanged } from 'firebase/auth'
-import { fetchTeams } from './components/data/fetchTeams'
+import { db } from './firebase'
+import { collection, doc, getDoc, getDocs, addDoc, deleteDoc, query, orderBy, where } from 'firebase/firestore';
 import { fetchRoster } from './components/data/fetchRoster'
 import { fetchGames } from './components/data/fetchGames'
-import { fetchTournaments } from './components/data/fetchTournaments'
 import { Substitutions } from './components/Substitutions'
 import Stats from './components/Stats'
 import Court from './components/Court'
@@ -18,89 +15,77 @@ import ScoreTable from './components/ScoreTable';
 import { ROLES } from './constants/roles';
 import RoleSelect from './components/RoleSelect';
 import AdvancedStats from './components/AdvancedStats'
-
+import useAuthManager from "./hooks/useAuthManager";
+import useTournamentManager from "./hooks/useTournamentManager";
+import useEventManager from "./hooks/useEventManager";
+import useRosterManager from "./hooks/useRosterManager";
 
 function App() {
   const [flipCourt, setFlipCourt] = useState(true);
-  const [user, setUser] = useState(null);
   const [show, setShow] = React.useState(true)
-  const [isLoadingData, setIsLoadingData] = useState(true);
   const [players, setPlayers] = useState([]);
-  const [teams, setTeams] = useState([]);
-  const [tournaments, setTournaments] = useState([]);
-  const [games, setGames] = useState([]);
   const [selectedPlayerId, setSelectedPlayerId] = useState(null);
-  const [selectedGameId, setSelectedGameId] = useState(null);
-  const [homeRoster, setHomeRoster] = useState([]);
-  const [awayRoster, setAwayRoster] = useState([]);
-  const [homeTeamName, setHomeTeamName] = useState("");
-  const [awayTeamName, setAwayTeamName] = useState("");
   const [selectedTeamId, setSelectedTeamId] = useState(null);
   const [roster, setRoster] = useState([]);
   const [pendingBenchSubs, setPendingBenchSubs] = useState([]);
-  const [selectedTournament, setSelectedTournament] = useState(null);
-  const [activeAwayPlayers, setActiveAwayPlayers] = useState(awayRoster.slice(0, 5));
-  const [activeHomePlayers, setActiveHomePlayers] = useState(homeRoster.slice(0, 5));
   const [currentQuarter, setCurrentQuarter] = useState(1);
   const quarters = [1, 2, 3, 4, "OT"];
-  const selectedGame = games.find((g) => g.id === selectedGameId);
-  const homeTeamId = selectedGame?.homeTeamId;
-  const awayTeamId = selectedGame?.awayTeamId;
-  const initialActiveRef = useRef({ home: false, away: false });
-  const [events, setEvents] = useState([]);
-  const [userRole, setUserRole] = useState(null);
-  const [selectedRole, setSelectedRole] = useState(null);
   const [courtFilter, setCourtFilter] = useState({
     team: "all",
     player: "all",
     quarter: "all"
   });
+  const handleFilterChange = useCallback(filters => setCourtFilter(filters), []);
+  const { user, isLoadingData, selectedRole, setUser } = useAuthManager();
+  
+  const {
+    selectedTournament,
+    games,
+    teams,
+    selectedGameId,
+    setSelectedGameId,
+    events,
+    setEvents,
+    homeRoster,
+    setHomeRoster,
+    awayRoster,
+    setAwayRoster,
+    homeTeamName,
+    setHomeTeamName,
+    awayTeamName,
+    setAwayTeamName,
+    homeTeamId,
+    awayTeamId,
+  } = useTournamentManager(selectedRole, user);
 
-  const sortedEvents = useMemo(() => {
-    if (!events || events.length === 0) {
-      return [];
-    }
-    return [...events].sort((a, b) => {
-      const dateA = a.createdAt instanceof Date 
-        ? a.createdAt 
-        : a.createdAt?.toDate() ?? new Date(0);
-      const dateB = b.createdAt instanceof Date 
-        ? b.createdAt 
-        : b.createdAt?.toDate() ?? new Date(0);
-      return dateA.getTime() - dateB.getTime();
-    });
-  }, [events]);
+  const {
+    handleAddEvent,
+    handleUndoEvent,
+    sortedEvents,
+    syncEventHistory,
+  } = useEventManager(
+    selectedTournament, 
+    selectedGameId, 
+    selectedRole, 
+    events, 
+    setEvents
+  );
 
-  const handleSub = useCallback((teamId, activePlayerIds, benchPlayerIds) => {
+  const {
+    activeHomePlayers,
+    activeAwayPlayers,
+    setActiveAwayPlayers,
+    setActiveHomePlayers,
+    handleSub,
+  } = useRosterManager(
+    selectedGameId, 
+    selectedTeamId, 
+    awayTeamId, 
+    homeTeamId, 
+    awayRoster, 
+    homeRoster
+  );
 
-    console.log("APP.JSX")
-    console.log("activePlayerIds", activePlayerIds)
-    console.log("benchPlayerIds", benchPlayerIds)
-
-    const setRosterState = teamId === awayTeamId ? setActiveAwayPlayers : setActiveHomePlayers;
-    const fullRoster = teamId === awayTeamId ? awayRoster : homeRoster;
-
-    setRosterState(prevRoster => {
-        let newRoster = [...prevRoster];
-        const playersToSubIn = benchPlayerIds.map(id => fullRoster.find(p => p.id === id));
-        
-        if (activePlayerIds.length !== playersToSubIn.length) {
-            console.error("Mismatch in number of players for substitution.");
-            return prevRoster;
-        }
-
-        activePlayerIds.forEach((outId, index) => {
-            const playerIn = playersToSubIn[index];
-            const playerOutIndex = newRoster.findIndex(p => p.id === outId);
-            if (playerOutIndex !== -1 && playerIn) {
-                newRoster[playerOutIndex] = playerIn;
-            }
-        });
-
-        newRoster.sort((a, b) => a.number - b.number);
-        return newRoster;
-    });
-  }, [awayTeamId, awayRoster, homeRoster,]);
 
   const homeTimeouts = events.filter(
     (e) => e.type === "timeOut" && e.teamId === homeTeamId
@@ -129,7 +114,6 @@ function App() {
   ).length;
 
   const handleUndoTimeout = async (teamId) => {
-
     try {
       const eventsRef = collection(
         db,
@@ -169,97 +153,7 @@ function App() {
     } catch (error) {
       console.error("Error undoing timeout:", error);
     }
-    };
-
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (authUser) => {
-      setIsLoadingData(true);
-      
-      if (authUser) {
-        // User is signed in. Fetch their custom role from Firestore.
-        const userDocRef = doc(db, 'users', authUser.uid);
-        const userDocSnap = await getDoc(userDocRef);
-        
-        if (userDocSnap.exists()) {
-          const userData = userDocSnap.data();
-          // Merge Firebase Auth user data with Firestore profile data
-          const userWithRole = { ...authUser, ...userData };
-          setUser(userWithRole);
-
-          if (userData.role) {
-            setSelectedRole(userData.username);
-          }
-
-          const idTokenResult = await authUser.getIdTokenResult(true);
-          //console.log("Custom claims from token exist:", idTokenResult.claims);
-          //console.log("ROLE:", userWithRole);
-        } else {
-          setUser(authUser);
-          const idTokenResult = await authUser.getIdTokenResult(true);
-        }
-      } else {
-        // User is signed out. Clear all user-related state.
-        setUser(null);
-        setTeams([]);
-        setTournaments([]);
-      }
-      
-      setIsLoadingData(false);
-    });
-
-    // Clean up the listener when the component unmounts
-    return () => unsubscribe();
-  }, []); // Run only once on mount to set up the listener
-
-
-  useEffect(() => {
-    if (!selectedGameId) return;
-    const game = games.find((g) => g.id === selectedGameId);
-    if (!game) return;
-    let unsubHomeTeam = () => {};
-    let unsubHomeRoster = () => {};
-    let unsubAwayTeam = () => {};
-    let unsubAwayRoster = () => {};
-    if (game.homeTeamId) {
-      const homeTeamRef = doc(db, "teams", game.homeTeamId);
-      unsubHomeTeam = onSnapshot(homeTeamRef, (snap) => {
-        if (snap.exists()) setHomeTeamName(snap.data().name || "Unknown Team");
-        else setHomeTeamName("Unknown Team");
-      }, (err) => console.error("homeTeam onSnapshot:", err));
-      const homeRosterColl = collection(homeTeamRef, "roster");
-      unsubHomeRoster = onSnapshot(homeRosterColl, (snap) => {
-        setHomeRoster(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-      }, (err) => console.error("homeRoster onSnapshot:", err));
-    }
-    if (game.awayTeamId) {
-      const awayTeamRef = doc(db, "teams", game.awayTeamId);
-      unsubAwayTeam = onSnapshot(awayTeamRef, (snap) => {
-        if (snap.exists()) setAwayTeamName(snap.data().name || "Unknown Team");
-        else setAwayTeamName("Unknown Team");
-      }, (err) => console.error("awayTeam onSnapshot:", err));
-
-      const awayRosterColl = collection(awayTeamRef, "roster");
-      unsubAwayRoster = onSnapshot(awayRosterColl, (snap) => {
-        setAwayRoster(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-      }, (err) => console.error("awayRoster onSnapshot:", err));
-    }
-
-    return () => {
-      try { unsubHomeTeam(); } catch {}
-      try { unsubHomeRoster(); } catch {}
-      try { unsubAwayTeam(); } catch {}
-      try { unsubAwayRoster(); } catch {}
-    };
-  }, [selectedGameId, games]);
-
-  useEffect(() => {
-    async function loadRoster() {
-      if (!selectedTeamId) return;
-      const fetchedRoster = await fetchRoster(db, selectedTeamId);
-      setRoster(fetchedRoster);
-    }
-    loadRoster();
-  }, [selectedTeamId]);
+  };
 
   useEffect(() => {
     async function loadGame() {
@@ -269,30 +163,6 @@ function App() {
     }
     loadGame();
   }, [selectedGameId]);
-
-  useEffect(() => {
-    async function loadTournamentData() {
-        const fetchedTournaments = await fetchTournaments(db);
-        setTournaments(fetchedTournaments);
-        if (fetchedTournaments.length > 0) {
-            setSelectedTournament(fetchedTournaments[0]);
-        }
-    }
-    loadTournamentData();
-  }, []); 
-
-  useEffect(() => {
-    async function loadGamesAndTeams() {
-      if (selectedTournament) {
-          const fetchedGames = await fetchGames(db, selectedTournament.id);
-          setGames(fetchedGames);
-          const fetchedTeams = await fetchTeams(db, selectedTournament.id);
-          setTeams(fetchedTeams);
-      }
-    }
-    loadGamesAndTeams();
-
-  }, [selectedTournament]);
 
   useEffect(() => {
     if (!selectedGameId) {
@@ -305,179 +175,6 @@ function App() {
       setSelectedTeamId(null);
     }
   }, [selectedGameId]);
-
-  useEffect(() => {
-    if (!selectedTournament || !selectedGameId) {
-      setEvents([]);
-      return;
-    }
-
-    const eventsColl = collection(
-      db,
-      "tournaments",
-      selectedTournament.id,
-      "games",
-      selectedGameId,
-      "events"
-    );
-
-    const q = query(eventsColl, orderBy("createdAt", "asc"));
-
-    const unsubscribe = onSnapshot(q, (snap) => {
-      const docs = snap.docs.map((d) => ({ 
-        id: d.id, 
-        ...d.data(),
-        createdAt: d.data().createdAt?.toDate()
-      }));
-      setEvents(docs);
-    }, (error) => {
-      console.error("events onSnapshot error:", error);
-    });
-
-    return () => unsubscribe();
-  }, [selectedTournament, selectedGameId]);
-
-  async function handleAddEvent(event) {
-    if (!selectedGameId) {
-      console.error("No selected game ID. Cannot add event.");
-      return;
-    }
-
-    const eventsRef = collection(
-      db,
-      "tournaments",
-      selectedTournament.id,
-      "games",
-      selectedGameId,
-      "events"
-    );
-
-    try {
-      const { id, ...eventDataToStore } = event;
-
-      const docRef = await addDoc(eventsRef, {
-        ...eventDataToStore,
-        createdAt: new Date(),
-      });
-
-      const storedEvent = { id: docRef.id, ...eventDataToStore };
-      await syncEventHistory(storedEvent, "add");
-
-    } catch (error) {
-      console.error("Error adding event:", error);
-    }
-  }
-
-  async function handleUndoEvent() {
-    if (events.length === 0) return;
-
-    let eventToDelete;
-    const allowedRoles = ["admin", "homeOffense", "awayOffense", "homeDefense", "awayDefense"];
-
-    if (!allowedRoles.includes(selectedRole)) {
-      alert("User role not permitted to undo events.");
-      return;
-    }
-
-    if (selectedRole === "admin") {
-      eventToDelete = events[events.length - 1];
-    } else {
-      for (let i = events.length - 1; i >= 0; i--) {
-        if (events[i].role === selectedRole) {
-          eventToDelete = events[i];
-          break;
-        }
-      }
-
-      if (!eventToDelete) {
-        alert(`Role ${user.role}: has no logs to undo.`);
-      }
-    }
-
-    if (selectedGameId && eventToDelete?.id) {
-      try {
-        const eventRef = doc(
-          db,
-          "tournaments",
-          selectedTournament.id,
-          "games",
-          selectedGameId,
-          "events",
-          eventToDelete.id
-        );
-
-        await deleteDoc(eventRef);
-        await syncEventHistory(eventToDelete, "delete");
-        //console.log("Deleted event from Firestore:", eventToDelete.id);
-      } catch (err) {
-        console.error("Error deleting event:", err);
-      }
-    }
-  }
-
-  async function syncEventHistory(event, actionType) {
-    try {
-      const { teamId, playerId, id: eventId } = event; // Use 'id' for the original event ID
-
-      const syncAction = async (historyRef) => {
-        if (actionType === "add") {
-          // Add a new document to the history
-          await addDoc(historyRef, {
-            ...event,
-            createdAt: new Date(),
-            source: "events"
-          });
-        } else if (actionType === "delete") {
-          // Find and delete the matching history document
-          const q = query(historyRef, where("id", "==", eventId)); // Query for the original event ID
-          const querySnapshot = await getDocs(q);
-
-          querySnapshot.forEach(async (docToDelete) => {
-            await deleteDoc(docToDelete.ref);
-          });
-        }
-      };
-
-      // TEAM HISTORY
-      if (teamId) {
-        const teamHistoryRef = collection(db, "teams", teamId, "history");
-        await syncAction(teamHistoryRef);
-      }
-
-      // PLAYER HISTORY
-      if (playerId) {
-        const playerHistoryRef = collection(db, "players", playerId, "history");
-        await syncAction(playerHistoryRef);
-      }
-
-    } catch (err) {
-      console.error("Error syncing event history:", err);
-    }
-  }
-
-  useEffect(() => {
-    initialActiveRef.current = { home: false, away: false };
-  }, [selectedGameId]);
-
-  useEffect(() => {
-    if (homeRoster.length && !initialActiveRef.current.home) {
-      const starters = homeRoster
-        .filter(player => player.starter)
-        .sort((a, b) => a.number - b.number);
-      setActiveHomePlayers(starters);
-      initialActiveRef.current.home = true;
-    }
-  }, [homeRoster]);
-
-  useEffect(() => {
-    if (awayRoster.length && !initialActiveRef.current.away) {
-      const starters = awayRoster
-        .filter(player => player.starter)
-        .sort((a, b) => a.number - b.number);
-      setActiveAwayPlayers(starters);
-      initialActiveRef.current.away = true;
-    }
-  }, [awayRoster]);
 
   const renderSubstitutions = () => {
     if (flipCourt) {
@@ -622,8 +319,6 @@ function App() {
     });
     return grouped;
   }, [filteredEvents]);
-  console.log("filteredEvents", filteredEvents)
-  console.log("eventsByQuarter", eventsByQuarter)
   function formatDate(maybeTimestamp) {
     if (!maybeTimestamp) return "";
     if (typeof maybeTimestamp.toDate === "function") {
@@ -767,7 +462,7 @@ function App() {
                         homeTeamName={homeTeamName}
                         awayTeamName={awayTeamName}
                         role={selectedRole}
-                        onFilterChange={(filters) => setCourtFilter(filters)}
+                        onFilterChange={handleFilterChange}
                         />
                       {flipCourt ? (
                         <>
@@ -827,8 +522,6 @@ function App() {
                         {flipCourt ? (
                           <>
                             <Substitutions
-                              key="away"
-                              side="away"
                               teamId={awayTeamId}
                               teamName={awayTeamName}
                               fullRoster={awayRoster}
@@ -843,8 +536,6 @@ function App() {
                               role={selectedRole}
                             />
                             <Substitutions
-                              key="home"
-                              side="home"
                               teamId={homeTeamId}
                               teamName={homeTeamName}
                               fullRoster={homeRoster}
